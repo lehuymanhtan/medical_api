@@ -555,7 +555,7 @@ components:
       properties:
         id: { type: string, format: uuid }
         subject: { type: string }
-        status: { type: string, enum: [OPEN, PENDING, RESOLVED] }
+        status: { type: string, enum: [OPEN, IN_PROGRESS, RESOLVED] }
         related_appointment_id: { type: string, format: uuid, nullable: true }
         created_at: { type: string, format: date-time }
         last_reply: { type: string }

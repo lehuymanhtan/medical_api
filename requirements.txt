@@ -1,6 +1,36 @@
+# Django Core
 Django
 djangorestframework
+
+# JWT Authentication
 djangorestframework-simplejwt
+
+# Database
 mysqlclient
+
+# File handling
+Pillow
+python-magic
+
+# Background tasks (for ticket auto-close)
 celery
 redis
+django-celery-beat
+
+# CORS support
+django-cors-headers
+
+# API documentation
+drf-spectacular
+
+# Rate limiting
+django-ratelimit
+
+# Development tools
+django-debug-toolbar
+
+# Environment variables
+python-decouple
+
+# Timezone support
+pytz
