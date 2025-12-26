@@ -675,6 +675,22 @@ indexes = [
 
 AUTH_USER_MODEL = 'mainAPI.User'
 
+# Database
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'medical_api',
+        'USER': 'your_mysql_user',
+        'PASSWORD': 'your_mysql_password',
+        'HOST': 'localhost',
+        'PORT': '3306',
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
+    }
+}
+
 # File upload
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -729,7 +745,8 @@ CELERY_BEAT_SCHEDULE = {
 - **djangorestframework-simplejwt**: For JWT auth
 - **Pillow**: For image handling
 - **Celery + Redis**: For background tasks (ticket auto-close)
-- **PostgreSQL**: Production database (UUID support)
+- **MySQL**: Production database (with utf8mb4 charset for full Unicode support)
+- **mysqlclient**: MySQL database adapter for Django
 - **django-cors-headers**: For frontend integration
 - **drf-spectacular**: For OpenAPI schema generation
 
