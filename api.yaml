@@ -1,0 +1,595 @@
+openapi: 3.0.3
+info:
+  title: API Hệ thống Quản lý Y tế
+  description: >
+    Tài liệu đặc tả API đầy đủ cho Hệ thống Quản lý Y tế Đại học.
+    
+    **Kiểm soát truy cập dựa trên vai trò (RBAC):**
+    - **Sinh viên/Cán bộ (Bệnh nhân):** Có thể đặt lịch hẹn, xem hồ sơ cá nhân, tạo phiếu hỗ trợ.
+    - **Bác sĩ:** Có thể xem hồ sơ bệnh nhân, quản lý lịch hẹn, thực hiện khám bệnh.
+    - **Quản trị viên (super bác sĩ):** Quản lý lịch trình (khung giờ) và cài đặt hệ thống.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Máy chủ phát triển cục bộ (Local Dev)
+
+tags:
+  - name: Auth
+    description: Các endpoint xác thực công khai.
+  - name: Patient Dashboard
+    description: Các endpoint tự phục vụ cho Sinh viên.
+  - name: Doctor Workflow
+    description: Công cụ cho Bác sĩ (Quét QR, Khám bệnh, Tra cứu bệnh nhân).
+  - name: Scheduling
+    description: Quản lý Lịch hẹn.
+  - name: Consulting
+    description: Hệ thống phiếu hỗ trợ/tư vấn.
+  - name: Utilities
+    description: Các tiện ích chung (Upload ảnh, file).
+
+paths:
+  # -------------------------------------------------------------------------
+  # XÁC THỰC (AUTHENTICATION)
+  # -------------------------------------------------------------------------
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Đăng nhập vào hệ thống
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Đăng nhập thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  # -------------------------------------------------------------------------
+  # TỰ PHỤC VỤ CHO NGƯỜI DÙNG & BỆNH NHÂN
+  # -------------------------------------------------------------------------
+  /users/me:
+    get:
+      tags:
+        - Patient Dashboard
+      summary: Lấy hồ sơ người dùng hiện tại
+      description: Trả về thông tin hồ sơ bao gồm UUID tĩnh để tạo mã QR.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Dữ liệu hồ sơ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+
+  /users/me/medical-summary:
+    get:
+      tags:
+        - Patient Dashboard
+      summary: Lấy tóm tắt y tế cá nhân
+      description: Trả về nhóm máu, các loại dị ứng và thông tin quan trọng khác.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Tóm tắt y tế
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientSummary'
+
+  /users/me/examinations:
+    get:
+      tags:
+        - Patient Dashboard
+      summary: Xem lịch sử khám bệnh của tôi
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách các lần khám trước đây
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExaminationSummary'
+
+  # -------------------------------------------------------------------------
+  # QUY TRÌNH BÁC SĨ (QUẢN LÝ BỆNH NHÂN)
+  # -------------------------------------------------------------------------
+  /patients/lookup:
+    get:
+      tags:
+        - Doctor Workflow
+      summary: Quét mã QR để tìm bệnh nhân
+      parameters:
+        - in: query
+          name: qr_code
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: UUID được quét từ ứng dụng của sinh viên
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Trả về thông tin tóm tắt của bệnh nhân
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PatientSummary'
+        '404':
+          description: Không tìm thấy bệnh nhân
+
+  /patients/{id}/examinations:
+    get:
+      tags:
+        - Doctor Workflow
+      summary: Xem toàn bộ lịch sử của một bệnh nhân cụ thể
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lịch sử khám bệnh của bệnh nhân
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExaminationSummary'
+
+  # -------------------------------------------------------------------------
+  # LỊCH HẸN & XẾP LỊCH
+  # -------------------------------------------------------------------------
+
+  /appointments:
+    get:
+      tags:
+        - Scheduling
+      summary: Danh sách lịch hẹn
+      description: >
+        - Bệnh nhân xem lịch hẹn của chính họ.
+        - Bác sĩ xem lịch làm việc của họ.
+      parameters:
+        - in: query
+          name: date
+          schema:
+            type: string
+            format: date
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách lịch hẹn
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Appointment'
+    post:
+      tags:
+        - Scheduling
+      summary: Đặt lịch hẹn
+      description: >
+        Sinh viên đăng ký để đi khám vào một ngày cụ thể.
+        Không cần chọn bác sĩ - bác sĩ sẽ được chọn khi tạo phiên khám.
+        Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentRequest'
+      responses:
+        '201':
+          description: Đã đặt lịch hẹn
+        '409':
+          description: Xung đột - Đã có lịch hẹn trong ngày này
+  /appointments/{id}:
+    patch:
+      tags:
+        - Scheduling
+      summary: Điều chỉnh lịch hẹn (Hủy/Đổi ngày)
+      description: >
+        - **Bệnh nhân:** Có thể hủy hoặc đổi ngày lịch hẹn của mình.
+        - **Bác sĩ/Admin:** Có thể cập nhật trạng thái.
+      parameters:
+        - in: path
+          name: id
+          required: true          
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppointmentPatch'
+      responses:
+        '200':
+          description: Đã cập nhật lịch hẹn
+
+  # -------------------------------------------------------------------------
+  # KHÁM CHỮA BỆNH (CORE LOGIC)
+  # -------------------------------------------------------------------------
+  /examinations:
+    post:
+      tags:
+        - Doctor Workflow
+      summary: Bắt đầu phiên khám bệnh mới
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExaminationRequest'
+      responses:
+        '201':
+          description: Đã tạo phiên khám
+
+  /examinations/{id}:
+    put:
+      tags:
+        - Doctor Workflow
+      summary: Cập nhật kết quả khám (Nháp/Đang xử lý)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExaminationUpdate'
+      responses:
+        '200':
+          description: Đã cập nhật
+
+  /examinations/{id}/finalize:
+    post:
+      tags:
+        - Doctor Workflow
+      summary: Hoàn tất chẩn đoán và khóa hồ sơ
+      description: Hành động không thể hoàn tác. Đặt trạng thái thành COMPLETED.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExaminationFinalize'
+      responses:
+        '200':
+          description: Hồ sơ đã khóa
+
+  # -------------------------------------------------------------------------
+  # PHIẾU HỖ TRỢ (CONSULTING)
+  # -------------------------------------------------------------------------
+  /tickets:
+    get:
+      tags:
+        - Consulting
+      summary: Danh sách phiếu hỗ trợ
+      description: >
+        - Sinh viên xem phiếu của mình.
+        - Bác sĩ/Admin xem phiếu được gán hoặc tất cả phiếu.
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Danh sách phiếu
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Ticket'
+    post:
+      tags:
+        - Consulting
+      summary: Tạo phiếu hỗ trợ mới
+      description: Chỉ sinh viên có thể tạo phiếu hỗ trợ.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketRequest'
+      responses:
+        '201':          
+          description: Đã tạo
+
+  /tickets/{id}:
+    get:
+      tags:
+        - Consulting
+      summary: Xem chi tiết ticket (bao gồm lịch sử phản hồi)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Chi tiết ticket và hội thoại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketDetail'
+
+  /tickets/{id}/close:
+    post:
+      tags:
+        - Consulting
+      summary: Đóng ticket (Đánh dấu là RESOLVED). Tự đóng nếu không có reply trong 15 phút.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Ticket đã được đóng thành công
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: 
+                    type: string
+                    example: "Ticket closed successfully"
+
+  /tickets/{id}/replies:
+    post:
+      tags:
+        - Consulting
+      summary: Trả lời phiếu hỗ trợ
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+      responses:
+        '201':
+          description: Đã thêm phản hồi
+
+  # -------------------------------------------------------------------------
+  # TIỆN ÍCH (UTILITIES)
+  # -------------------------------------------------------------------------
+  /upload/image:
+    post:
+      tags:
+        - Utilities
+      summary: Upload ảnh lên hệ thống
+      description: Upload file ảnh và nhận lại URL. Chỉ hỗ trợ định dạng .jpg, .jpeg, .png. Dùng cho hồ sơ hoặc đính kèm ticket.
+      security:
+        - BearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File ảnh cần upload (jpg, jpeg, png - tối đa 10MB)
+      responses:
+        '200':
+          description: Upload thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageUploadResponse'
+
+# -------------------------------------------------------------------------
+# COMPONENTS & SCHEMAS
+# -------------------------------------------------------------------------
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # --- Auth & User ---
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: '#/components/schemas/UserProfile' }
+
+    UserProfile:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        full_name: { type: string }
+        role: { type: string, enum: [STUDENT, DOCTOR, ADMIN] }
+        student_id: { type: string }
+
+
+    # --- Medical Data ---
+    PatientSummary:
+      type: object
+      properties:
+        blood_type: { type: string }
+        allergies: { type: array, items: { type: string } }
+        last_diagnosis: { type: string }
+        last_visit_date: { type: string, format: date }
+        
+    ExaminationSummary:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        date: { type: string, format: date-time }
+        doctor_name: { type: string }
+        diagnosis_short: { type: string }
+        status: { type: string, enum: [DRAFT, COMPLETED] }
+
+    ExaminationRequest:
+      type: object
+      required: [patient_id, appointment_id]
+      properties:
+        patient_id: { type: string, format: uuid }
+        appointment_id: { type: string, format: uuid }
+
+    ExaminationUpdate:
+      type: object
+      properties:
+        symptoms: { type: string }
+        initial_diagnosis: { type: string }
+        notes: { type: string }
+
+    ExaminationFinalize:
+      type: object
+      required: [final_diagnosis, prescription]
+      properties:
+        final_diagnosis: { type: string }
+        prescription: { type: string }
+        notes: { type: string }
+
+    # --- Appointments ---
+
+    Appointment:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        patient_id: { type: string, format: uuid }
+        appointment_date: { type: string, format: date }
+        status: { type: string, enum: [PENDING, COMPLETED, CANCELLED] }
+        reason: { type: string }
+
+    AppointmentRequest:
+      type: object
+      required: [appointment_date, reason]
+      properties:
+        appointment_date: { type: string, format: date }
+        reason: { type: string }
+
+    AppointmentPatch:
+      type: object
+      properties:
+        status:
+          type: string  
+          enum: [COMPLETED, CANCELLED]
+        new_appointment_date:
+          type: string
+          format: date
+        cancellation_reason:
+          type: string
+
+    # --- Tickets ---
+    Ticket:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        subject: { type: string }
+        status: { type: string, enum: [OPEN, PENDING, RESOLVED] }
+        related_appointment_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+        last_reply: { type: string }
+
+    TicketRequest:
+      type: object
+      required: [subject, content]
+      properties:
+        subject: { type: string }
+        content: { type: string }
+        related_appointment_id: { type: string, format: uuid }
+
+    TicketReply:
+      type: object
+      properties:
+        author_name: { type: string }
+        content: { type: string }
+        created_at: { type: string, format: date-time }
+        is_staff_reply: { type: boolean }
+    TicketDetail:
+      allOf:
+        - $ref: '#/components/schemas/Ticket'
+        - type: object
+          properties:
+            replies:
+              type: array
+              items:
+                $ref: '#/components/schemas/TicketReply'
+
+    # --- Utilities ---
+    ImageUploadResponse:
+      type: object
+      properties:
+        url:
+          type: string
+          example: "https://cdn.hospital.edu.vn/uploads/img_12345.jpg"
+          description: Đường dẫn truy cập ảnh đã upload
