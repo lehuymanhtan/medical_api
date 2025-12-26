@@ -1,0 +1,6 @@
+Django
+djangorestframework
+djangorestframework-simplejwt
+mysqlclient
+celery
+redis
