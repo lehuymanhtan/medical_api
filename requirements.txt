@@ -34,3 +34,15 @@ python-decouple
 
 # Timezone support
 pytz
+
+# Production WSGI server
+gunicorn
+
+# Production security
+django-environ
+
+# Database connection pooling
+django-db-connection-pool
+
+# Monitoring and logging
+sentry-sdk==1.40.0
