@@ -7,7 +7,12 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from mainAPI.serializers.user import UserProfileSerializer
+from drf_spectacular.utils import extend_schema, OpenApiExample
+from mainAPI.serializers.user import (
+    UserProfileSerializer,
+    LoginRequestSerializer,
+    LoginResponseSerializer
+)
 from mainAPI.models import AuditLog
 
 
@@ -18,6 +23,38 @@ class LoginView(APIView):
     """
     permission_classes = [AllowAny]
     
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='login',
+        summary='Đăng nhập vào hệ thống',
+        description='Xác thực người dùng và trả về JWT token cùng thông tin hồ sơ.',
+        request=LoginRequestSerializer,
+        responses={200: LoginResponseSerializer},
+        examples=[
+            OpenApiExample(
+                'Login Example',
+                value={
+                    'username': 'student001',
+                    'password': 'password123'
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Login Response',
+                value={
+                    'token': 'eyJ0eXAiOiJKV1QiLCJhbGc...',
+                    'refresh': 'eyJ0eXAiOiJKV1QiLCJhbGc...',
+                    'user': {
+                        'id': '123e4567-e89b-12d3-a456-426614174000',
+                        'full_name': 'Nguyễn Văn A',
+                        'role': 'STUDENT',
+                        'student_id': 'SV001'
+                    }
+                },
+                response_only=True,
+            )
+        ],
+    )
     def post(self, request):
         """
         Authenticate user and return JWT tokens

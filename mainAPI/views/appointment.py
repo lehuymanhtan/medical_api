@@ -4,6 +4,8 @@ Appointment Management Views
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.db import IntegrityError
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.types import OpenApiTypes
 from mainAPI.models import Appointment, AuditLog
 from mainAPI.serializers.appointment import (
     AppointmentSerializer,
@@ -51,6 +53,24 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             return AppointmentPatchSerializer
         return AppointmentSerializer
     
+    @extend_schema(
+        tags=['Scheduling'],
+        operation_id='listAppointments',
+        summary='Danh sách lịch hẹn',
+        description='''Lấy danh sách lịch hẹn dựa trên vai trò:
+- Bệnh nhân xem lịch hẹn của chính họ.
+- Bác sĩ xem lịch làm việc của họ.''',
+        parameters=[
+            OpenApiParameter(
+                name='date',
+                type=OpenApiTypes.DATE,
+                location=OpenApiParameter.QUERY,
+                description='Lọc theo ngày hẹn',
+                required=False,
+            )
+        ],
+        responses={200: AppointmentSerializer(many=True)}
+    )
     def list(self, request):
         """
         GET /appointments
@@ -67,6 +87,29 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        tags=['Scheduling'],
+        operation_id='createAppointment',
+        summary='Đặt lịch hẹn',
+        description='''Sinh viên đăng ký để đi khám vào một ngày cụ thể.
+Không cần chọn bác sĩ - bác sĩ sẽ được chọn khi tạo phiên khám.
+Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.''',
+        request=AppointmentCreateSerializer,
+        responses={
+            201: AppointmentSerializer,
+            409: {'description': 'Xung đột - Đã có lịch hẹn trong ngày này'}
+        },
+        examples=[
+            OpenApiExample(
+                'Appointment Request',
+                value={
+                    'appointment_date': '2025-12-30',
+                    'reason': 'Đau đầu và sốt'
+                },
+                request_only=True,
+            )
+        ]
+    )
     def create(self, request):
         """
         POST /appointments
@@ -103,6 +146,33 @@ class AppointmentViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_409_CONFLICT
             )
     
+    @extend_schema(
+        tags=['Scheduling'],
+        operation_id='updateAppointment',
+        summary='Điều chỉnh lịch hẹn (Hủy/Đổi ngày)',
+        description='''Cập nhật trạng thái lịch hẹn:
+- **Bệnh nhân:** Có thể hủy hoặc đổi ngày lịch hẹn của mình.
+- **Bác sĩ/Admin:** Có thể cập nhật trạng thái.''',
+        request=AppointmentPatchSerializer,
+        responses={200: AppointmentSerializer},
+        examples=[
+            OpenApiExample(
+                'Cancel Appointment',
+                value={
+                    'status': 'CANCELLED',
+                    'cancellation_reason': 'Có việc đột xuất'
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Reschedule Appointment',
+                value={
+                    'new_appointment_date': '2025-12-31'
+                },
+                request_only=True,
+            )
+        ]
+    )
     def partial_update(self, request, pk=None):
         """
         PATCH /appointments/{id}

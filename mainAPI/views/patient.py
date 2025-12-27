@@ -5,6 +5,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
 from mainAPI.models import User, Examination, AuditLog
 from mainAPI.serializers.user import PatientSummarySerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
@@ -17,6 +19,25 @@ class PatientViewSet(viewsets.GenericViewSet):
     """
     permission_classes = [IsDoctor]
     
+    @extend_schema(
+        tags=['Doctor Workflow'],
+        operation_id='patientLookup',
+        summary='Quét mã QR để tìm bệnh nhân',
+        description='Tìm kiếm bệnh nhân bằng UUID được quét từ ứng dụng của sinh viên.',
+        parameters=[
+            OpenApiParameter(
+                name='qr_code',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.QUERY,
+                description='UUID được quét từ ứng dụng của sinh viên',
+                required=True,
+            )
+        ],
+        responses={
+            200: PatientSummarySerializer,
+            404: {'description': 'Không tìm thấy bệnh nhân'}
+        }
+    )
     @action(detail=False, methods=['get'], url_path='lookup')
     def lookup(self, request):
         """
@@ -50,6 +71,22 @@ class PatientViewSet(viewsets.GenericViewSet):
         serializer = PatientSummarySerializer(patient)
         return Response(serializer.data)
     
+    @extend_schema(
+        tags=['Doctor Workflow'],
+        operation_id='getPatientExaminations',
+        summary='Xem toàn bộ lịch sử của một bệnh nhân cụ thể',
+        description='Trả về lịch sử khám bệnh đầy đủ của một bệnh nhân.',
+        parameters=[
+            OpenApiParameter(
+                name='id',
+                type=OpenApiTypes.UUID,
+                location=OpenApiParameter.PATH,
+                description='ID của bệnh nhân',
+                required=True,
+            )
+        ],
+        responses={200: ExaminationSummarySerializer(many=True)}
+    )
     @action(detail=True, methods=['get'], url_path='examinations')
     def examinations(self, request, pk=None):
         """

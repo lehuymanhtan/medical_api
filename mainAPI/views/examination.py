@@ -5,6 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from mainAPI.models import Examination, AuditLog
 from mainAPI.serializers.examination import (
     ExaminationSerializer,
@@ -32,6 +33,24 @@ class ExaminationViewSet(viewsets.ModelViewSet):
             return ExaminationFinalizeSerializer
         return ExaminationSerializer
     
+    @extend_schema(
+        tags=['Doctor Workflow'],
+        operation_id='createExamination',
+        summary='Bắt đầu phiên khám bệnh mới',
+        description='Tạo một bản ghi khám bệnh mới cho bệnh nhân.',
+        request=ExaminationCreateSerializer,
+        responses={201: ExaminationSerializer},
+        examples=[
+            OpenApiExample(
+                'Examination Request',
+                value={
+                    'patient_id': '123e4567-e89b-12d3-a456-426614174000',
+                    'appointment_id': '223e4567-e89b-12d3-a456-426614174000'
+                },
+                request_only=True,
+            )
+        ]
+    )
     def create(self, request):
         """
         POST /examinations
@@ -63,6 +82,25 @@ class ExaminationViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED
         )
     
+    @extend_schema(
+        tags=['Doctor Workflow'],
+        operation_id='updateExamination',
+        summary='Cập nhật kết quả khám (Nháp/Đang xử lý)',
+        description='Cập nhật thông tin khám bệnh cho bản ghi ở trạng thái nháp.',
+        request=ExaminationUpdateSerializer,
+        responses={200: ExaminationSerializer},
+        examples=[
+            OpenApiExample(
+                'Update Examination',
+                value={
+                    'symptoms': 'Đau đầu, sốt cao, ho khan',
+                    'initial_diagnosis': 'Nghi ngờ cảm cúm',
+                    'notes': 'Bệnh nhân cần nghỉ ngơi và theo dõi thêm'
+                },
+                request_only=True,
+            )
+        ]
+    )
     def update(self, request, pk=None):
         """
         PUT /examinations/{id}
@@ -106,6 +144,25 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         
         return Response(ExaminationSerializer(updated_examination).data)
     
+    @extend_schema(
+        tags=['Doctor Workflow'],
+        operation_id='finalizeExamination',
+        summary='Hoàn tất chẩn đoán và khóa hồ sơ',
+        description='Hành động không thể hoàn tác. Đặt trạng thái thành COMPLETED và khóa hồ sơ khám bệnh.',
+        request=ExaminationFinalizeSerializer,
+        responses={200: ExaminationSerializer},
+        examples=[
+            OpenApiExample(
+                'Finalize Examination',
+                value={
+                    'final_diagnosis': 'Cảm cúm mùa',
+                    'prescription': 'Paracetamol 500mg, 3 lần/ngày. Nghỉ ngơi ít nhất 3 ngày.',
+                    'notes': 'Tái khám sau 3 ngày nếu triệu chứng không cải thiện'
+                },
+                request_only=True,
+            )
+        ]
+    )
     @action(detail=True, methods=['post'], url_path='finalize')
     def finalize(self, request, pk=None):
         """

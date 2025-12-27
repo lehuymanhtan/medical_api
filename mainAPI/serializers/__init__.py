@@ -1,7 +1,12 @@
 """
 Serializers package
 """
-from .user import UserProfileSerializer, PatientSummarySerializer
+from .user import (
+    UserProfileSerializer, 
+    PatientSummarySerializer,
+    LoginRequestSerializer,
+    LoginResponseSerializer
+)
 from .appointment import (
     AppointmentSerializer,
     AppointmentCreateSerializer,
@@ -25,6 +30,8 @@ from .utility import ImageUploadSerializer
 __all__ = [
     'UserProfileSerializer',
     'PatientSummarySerializer',
+    'LoginRequestSerializer',
+    'LoginResponseSerializer',
     'AppointmentSerializer',
     'AppointmentCreateSerializer',
     'AppointmentPatchSerializer',

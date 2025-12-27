@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
+from drf_spectacular.utils import extend_schema, OpenApiExample
 from mainAPI.models import Ticket, TicketReply, AuditLog
 from mainAPI.serializers.ticket import (
     TicketSerializer,
@@ -57,6 +58,15 @@ class TicketViewSet(viewsets.ModelViewSet):
             return TicketDetailSerializer
         return TicketSerializer
     
+    @extend_schema(
+        tags=['Consulting'],
+        operation_id='listTickets',
+        summary='Danh sách phiếu hỗ trợ',
+        description='''Lấy danh sách phiếu hỗ trợ dựa trên vai trò:
+- Sinh viên xem phiếu của mình.
+- Bác sĩ/Admin xem phiếu được gán hoặc tất cả phiếu.''',
+        responses={200: TicketSerializer(many=True)}
+    )
     def list(self, request):
         """
         GET /tickets
@@ -66,6 +76,25 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
+    @extend_schema(
+        tags=['Consulting'],
+        operation_id='createTicket',
+        summary='Tạo phiếu hỗ trợ mới',
+        description='Chỉ sinh viên có thể tạo phiếu hỗ trợ.',
+        request=TicketCreateSerializer,
+        responses={201: TicketDetailSerializer},
+        examples=[
+            OpenApiExample(
+                'Create Ticket',
+                value={
+                    'subject': 'Hỏi về kết quả xét nghiệm',
+                    'content': 'Tôi muốn biết thêm thông tin về kết quả xét nghiệm máu của tôi.',
+                    'related_appointment_id': '223e4567-e89b-12d3-a456-426614174000'
+                },
+                request_only=True,
+            )
+        ]
+    )
     def create(self, request):
         """
         POST /tickets
@@ -96,6 +125,13 @@ class TicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_201_CREATED
         )
     
+    @extend_schema(
+        tags=['Consulting'],
+        operation_id='getTicketDetail',
+        summary='Xem chi tiết ticket (bao gồm lịch sử phản hồi)',
+        description='Lấy thông tin chi tiết của ticket và tất cả các phản hồi.',
+        responses={200: TicketDetailSerializer}
+    )
     def retrieve(self, request, pk=None):
         """
         GET /tickets/{id}
@@ -110,6 +146,20 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer = TicketDetailSerializer(ticket)
         return Response(serializer.data)
     
+    @extend_schema(
+        tags=['Consulting'],
+        operation_id='closeTicket',
+        summary='Đóng ticket (Đánh dấu là RESOLVED)',
+        description='Đóng phiếu hỗ trợ. Ticket cũng tự động đóng nếu không có reply trong 15 phút.',
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'message': {'type': 'string', 'example': 'Ticket closed successfully'}
+                }
+            }
+        }
+    )
     @action(detail=True, methods=['post'], url_path='close')
     def close(self, request, pk=None):
         """
@@ -142,6 +192,23 @@ class TicketViewSet(viewsets.ModelViewSet):
             status=status.HTTP_200_OK
         )
     
+    @extend_schema(
+        tags=['Consulting'],
+        operation_id='replyToTicket',
+        summary='Trả lời phiếu hỗ trợ',
+        description='Thêm phản hồi vào phiếu hỗ trợ.',
+        request=TicketReplyCreateSerializer,
+        responses={201: {'description': 'Đã thêm phản hồi'}},
+        examples=[
+            OpenApiExample(
+                'Reply to Ticket',
+                value={
+                    'content': 'Cảm ơn bạn đã liên hệ. Kết quả xét nghiệm của bạn nằm trong giới hạn bình thường.'
+                },
+                request_only=True,
+            )
+        ]
+    )
     @action(detail=True, methods=['post'], url_path='replies')
     def add_reply(self, request, pk=None):
         """

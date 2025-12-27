@@ -44,7 +44,7 @@ class TicketSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at']
     
-    def get_last_reply(self, obj):
+    def get_last_reply(self, obj) -> str:
         """Get the content of the most recent reply"""
         last_reply = obj.replies.order_by('-created_at').first()
         if last_reply:

@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.db import connection
 from django.core.cache import cache
+from drf_spectacular.utils import extend_schema
 import redis
 
 
@@ -17,6 +18,9 @@ class HealthCheckView(APIView):
     """
     permission_classes = [AllowAny]
     
+    @extend_schema(
+        exclude=True,  # Exclude from API documentation as it's a monitoring endpoint
+    )
     def get(self, request):
         """
         Returns health status of the application

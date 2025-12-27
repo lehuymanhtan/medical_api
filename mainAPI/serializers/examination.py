@@ -23,7 +23,7 @@ class ExaminationSummarySerializer(serializers.ModelSerializer):
             'status',
         ]
     
-    def get_diagnosis_short(self, obj):
+    def get_diagnosis_short(self, obj) -> str:
         """Return truncated diagnosis"""
         if obj.status == 'COMPLETED' and obj.final_diagnosis:
             return obj.final_diagnosis[:100]

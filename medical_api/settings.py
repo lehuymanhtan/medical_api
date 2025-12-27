@@ -103,7 +103,7 @@ DATABASES = {
         'NAME': config('DB_NAME', default='medical_api'),
         'USER': config('DB_USER', default='root'),
         'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST', default='localhost'),
+        'HOST': config('DB_HOST', default='127.0.0.1'),
         'PORT': config('DB_PORT', default='3306'),
         'OPTIONS': {
             'charset': 'utf8mb4',
@@ -184,13 +184,16 @@ REST_FRAMEWORK = {
 
 # JWT
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=8),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
 }
 
 # CORS Configuration
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000').split(',')
+CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:8000').split(',')
 CORS_ALLOW_CREDENTIALS = True
+
+# CSRF Trusted Origins (required for POST requests from different origins)
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='http://localhost:8000').split(',')
 
 # Celery Configuration
 CELERY_BROKER_URL = config('CELERY_BROKER_URL', default='redis://localhost:6379/0')
@@ -266,8 +269,30 @@ if SENTRY_DSN and not DEBUG:
 
 # API Documentation
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'Medical API',
-    'DESCRIPTION': 'University Medical Management System API',
+    'TITLE': 'API Hệ thống Quản lý Y tế',
+    'DESCRIPTION': '''Tài liệu đặc tả API đầy đủ cho Hệ thống Quản lý Y tế Đại học.
+    
+**Kiểm soát truy cập dựa trên vai trò (RBAC):**
+- **Sinh viên/Cán bộ (Bệnh nhân):** Có thể đặt lịch hẹn, xem hồ sơ cá nhân, tạo phiếu hỗ trợ.
+- **Bác sĩ:** Có thể xem hồ sơ bệnh nhân, quản lý lịch hẹn, thực hiện khám bệnh.
+- **Quản trị viên (super bác sĩ):** Quản lý lịch trình (khung giờ) và cài đặt hệ thống.''',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'SERVERS': [
+        {'url': 'http://localhost:8000', 'description': 'Máy chủ phát triển cục bộ (Local Dev)'},
+        {'url': 'https://dev_medicalapi.tanmanh350.ovh', 'description': 'Máy chủ phát triển (Development)'}
+    ],
+    'TAGS': [
+        {'name': 'Auth', 'description': 'Các endpoint xác thực công khai.'},
+        {'name': 'Patient Dashboard', 'description': 'Các endpoint tự phục vụ cho Sinh viên.'},
+        {'name': 'Doctor Workflow', 'description': 'Công cụ cho Bác sĩ (Quét QR, Khám bệnh, Tra cứu bệnh nhân).'},
+        {'name': 'Scheduling', 'description': 'Quản lý Lịch hẹn.'},
+        {'name': 'Consulting', 'description': 'Hệ thống phiếu hỗ trợ/tư vấn.'},
+        {'name': 'Utilities', 'description': 'Các tiện ích chung (Upload ảnh, file).'},
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'SCHEMA_PATH_PREFIX': '/api/v1/',
+    'POSTPROCESSING_HOOKS': [
+        'drf_spectacular.hooks.postprocess_schema_enums',
+    ],
 }

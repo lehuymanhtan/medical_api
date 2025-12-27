@@ -5,6 +5,22 @@ from rest_framework import serializers
 from mainAPI.models import User, PatientProfile, DoctorProfile
 
 
+class LoginRequestSerializer(serializers.Serializer):
+    """Serializer for login request"""
+    username = serializers.CharField(required=True)
+    password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
+
+
+class LoginResponseSerializer(serializers.Serializer):
+    """Serializer for login response"""
+    token = serializers.CharField(read_only=True)
+    refresh = serializers.CharField(read_only=True)
+    user = serializers.SerializerMethodField()
+    
+    def get_user(self, obj) -> dict:
+        return UserProfileSerializer(obj.get('user')).data
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for user profile data
@@ -46,13 +62,13 @@ class PatientSummarySerializer(serializers.ModelSerializer):
             'last_visit_date',
         ]
     
-    def get_allergies(self, obj):
+    def get_allergies(self, obj) -> list:
         """Parse comma-separated allergies into list"""
         if hasattr(obj, 'patient_profile') and obj.patient_profile.allergies:
             return [a.strip() for a in obj.patient_profile.allergies.split(',') if a.strip()]
         return []
     
-    def get_last_diagnosis(self, obj):
+    def get_last_diagnosis(self, obj) -> str:
         """Get the most recent diagnosis"""
         last_exam = obj.examinations_as_patient.filter(
             status='COMPLETED'
@@ -62,7 +78,7 @@ class PatientSummarySerializer(serializers.ModelSerializer):
             return last_exam.final_diagnosis[:100]  # Truncate to 100 chars
         return None
     
-    def get_last_visit_date(self, obj):
+    def get_last_visit_date(self, obj) -> str:
         """Get the date of last examination"""
         last_exam = obj.examinations_as_patient.filter(
             status='COMPLETED'
