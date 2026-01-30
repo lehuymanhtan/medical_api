@@ -59,7 +59,22 @@ class ImageUploadSerializer(serializers.ModelSerializer):
         )
         
         # Set the URL after saving (when we have the file path)
-        uploaded_file.url = self.context['request'].build_absolute_uri(uploaded_file.file.url)
-        uploaded_file.save()
+        # Set the URL after saving
+        file_url = uploaded_file.file.url
+        request = self.context['request']
+        
+        # Check if URL is already absolute (e.g. S3)
+        if file_url.startswith(('http:', 'https:')):
+            uploaded_file.url = file_url
+        else:
+            # Handle local storage with proxy headers
+            x_forwarded_host = request.META.get('HTTP_X_FORWARDED_HOST')
+            if x_forwarded_host:
+                x_forwarded_proto = request.META.get('HTTP_X_FORWARDED_PROTO', request.scheme)
+                uploaded_file.url = f"{x_forwarded_proto}://{x_forwarded_host}{file_url}"
+            else:
+                uploaded_file.url = request.build_absolute_uri(file_url)
+        
+        uploaded_file.save(update_fields=['url'])
         
         return uploaded_file

@@ -4,6 +4,7 @@ Appointment Management Views
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.db import IntegrityError
+from django.utils import timezone
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from mainAPI.models import Appointment, AuditLog
@@ -39,8 +40,15 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if user.role == 'STUDENT':
             # Students see only their own appointments
             return Appointment.objects.filter(patient=user).select_related('patient')
-        elif user.role in ['DOCTOR', 'ADMIN']:
-            # Doctors/admins see all appointments
+        elif user.role == 'DOCTOR':
+            # Doctors see upcoming, non-completed appointments
+            return Appointment.objects.filter(
+                appointment_date__gte=timezone.now().date()
+            ).exclude(
+                status='COMPLETED'
+            ).select_related('patient')
+        elif user.role == 'ADMIN':
+            # Admins see all appointments
             return Appointment.objects.all().select_related('patient')
         
         return Appointment.objects.none()

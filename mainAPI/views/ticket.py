@@ -158,7 +158,8 @@ class TicketViewSet(viewsets.ModelViewSet):
                     'message': {'type': 'string', 'example': 'Ticket closed successfully'}
                 }
             }
-        }
+        },
+        request=None
     )
     @action(detail=True, methods=['post'], url_path='close')
     def close(self, request, pk=None):
