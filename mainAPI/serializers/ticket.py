@@ -98,6 +98,9 @@ class TicketCreateSerializer(serializers.ModelSerializer):
             'content',
             'related_appointment',
         ]
+        extra_kwargs = {
+            'related_appointment': {'help_text': 'Optional UUID of an appointment related to this query.'},
+        }
     
     def create(self, validated_data):
         """Create ticket and initial reply"""
@@ -126,6 +129,10 @@ class TicketReplyCreateSerializer(serializers.ModelSerializer):
             'content',
             'attachment_url',
         ]
+        extra_kwargs = {
+            'content': {'help_text': 'Content of the reply.'},
+            'attachment_url': {'help_text': 'Optional URL of an uploaded image attachment.'},
+        }
     
     def create(self, validated_data):
         """Add author from request context"""
