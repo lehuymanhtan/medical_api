@@ -7,8 +7,8 @@ from mainAPI.models import User, PatientProfile, DoctorProfile
 
 class LoginRequestSerializer(serializers.Serializer):
     """Serializer for login request"""
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
+    username = serializers.CharField(required=True, help_text="Student ID (e.g., SV001) or Staff Username")
+    password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'}, help_text="User password")
 
 
 class LoginResponseSerializer(serializers.Serializer):

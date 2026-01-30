@@ -96,6 +96,17 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
             'weight',
             'height',
         ]
+        extra_kwargs = {
+            'patient_id': {'help_text': 'UUID of the student/patient.'},
+            'appointment_id': {'help_text': 'UUID of the pending appointment to be processed.'},
+            'symptoms': {'help_text': 'Detailed description of patient symptoms.'},
+            'initial_diagnosis': {'help_text': 'Preliminary diagnosis based on initial check.'},
+            'blood_pressure': {'help_text': 'Blood pressure reading (e.g., 120/80).'},
+            'heart_rate': {'help_text': 'Heart rate in beats per minute (bpm).'},
+            'temperature': {'help_text': 'Body temperature in Celsius (°C).'},
+            'weight': {'help_text': 'Patient weight in kg.'},
+            'height': {'help_text': 'Patient height in cm.'},
+        }
     
     def validate(self, attrs):
         """Validate appointment and patient"""
@@ -159,6 +170,11 @@ class ExaminationUpdateSerializer(serializers.ModelSerializer):
             'weight',
             'height',
         ]
+        extra_kwargs = {
+            'blood_pressure': {'help_text': 'Update blood pressure reading (e.g., 120/80).'},
+            'heart_rate': {'help_text': 'Update heart rate (bpm).'},
+            'temperature': {'help_text': 'Update temperature (°C).'},
+        }
     
     def validate(self, attrs):
         """Prevent updates to finalized examinations"""
@@ -179,6 +195,11 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
             'prescription',
             'notes',
         ]
+        extra_kwargs = {
+            'final_diagnosis': {'help_text': 'Conclusive diagnosis (required for finalization).'},
+            'prescription': {'help_text': 'Medicines and dosage instructions (required for finalization).'},
+            'notes': {'help_text': 'Final notes or follow-up instructions.'},
+        }
     
     def validate(self, attrs):
         """Ensure required fields are present"""

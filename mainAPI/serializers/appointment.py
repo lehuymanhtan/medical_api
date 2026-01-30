@@ -40,6 +40,10 @@ class AppointmentCreateSerializer(serializers.ModelSerializer):
             'appointment_date',
             'reason',
         ]
+        extra_kwargs = {
+            'appointment_date': {'help_text': 'Date of the appointment (YYYY-MM-DD). Must be in the future.'},
+            'reason': {'help_text': 'Brief reason for the visit or symptoms description.'},
+        }
     
     def validate_appointment_date(self, value):
         """Validate appointment date is not in the past"""
@@ -66,6 +70,11 @@ class AppointmentPatchSerializer(serializers.ModelSerializer):
             'new_appointment_date',
             'cancellation_reason',
         ]
+        extra_kwargs = {
+            'status': {'help_text': 'New status for the appointment (e.g., CANCELLED).'},
+            'new_appointment_date': {'help_text': 'New date if rescheduling (YYYY-MM-DD).'},
+            'cancellation_reason': {'help_text': 'Reason for cancellation (required if status is CANCELLED).'},
+        }
     
     def validate(self, attrs):
         """Validate status transitions"""
