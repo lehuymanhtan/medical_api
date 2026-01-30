@@ -45,4 +45,4 @@ django-environ
 django-db-connection-pool
 
 # Monitoring and logging
-sentry-sdk==1.40.0
+sentry-sdk

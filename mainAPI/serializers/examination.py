@@ -77,9 +77,10 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
     """
     Serializer for creating examinations
     Doctor is automatically set from request.user
+    appointment_id is optional (for emergency cases without prior appointment)
     """
     patient_id = serializers.UUIDField(write_only=True)
-    appointment_id = serializers.UUIDField(write_only=True)
+    appointment_id = serializers.UUIDField(write_only=True, required=False, allow_null=True)
     
     class Meta:
         model = Examination
@@ -101,7 +102,7 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
         from mainAPI.models import User
         
         patient_id = attrs.pop('patient_id')
-        appointment_id = attrs.pop('appointment_id')
+        appointment_id = attrs.pop('appointment_id', None)
         
         # Validate patient exists and is a student
         try:
@@ -110,18 +111,22 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid patient ID")
         
-        # Validate appointment exists and hasn't been examined
-        try:
-            appointment = Appointment.objects.get(id=appointment_id)
-            if hasattr(appointment, 'examination'):
-                raise serializers.ValidationError("This appointment already has an examination")
-            attrs['appointment'] = appointment
-        except Appointment.DoesNotExist:
-            raise serializers.ValidationError("Invalid appointment ID")
-        
-        # Validate patient matches appointment
-        if appointment.patient != patient:
-            raise serializers.ValidationError("Patient ID doesn't match appointment")
+        # Validate appointment if provided
+        if appointment_id:
+            try:
+                appointment = Appointment.objects.get(id=appointment_id)
+                if hasattr(appointment, 'examination'):
+                    raise serializers.ValidationError("This appointment already has an examination")
+                attrs['appointment'] = appointment
+                
+                # Validate patient matches appointment
+                if appointment.patient != patient:
+                    raise serializers.ValidationError("Patient ID doesn't match appointment")
+            except Appointment.DoesNotExist:
+                raise serializers.ValidationError("Invalid appointment ID")
+        else:
+            # Emergency case - no appointment
+            attrs['appointment'] = None
         
         return attrs
     

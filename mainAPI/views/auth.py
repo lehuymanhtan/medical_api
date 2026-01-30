@@ -6,6 +6,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from mainAPI.serializers.user import (
@@ -114,3 +115,81 @@ class LoginView(APIView):
         else:
             ip = request.META.get('REMOTE_ADDR')
         return ip
+
+
+class RefreshTokenView(APIView):
+    """
+    Refresh access token using refresh token
+    """
+    permission_classes = [AllowAny]
+    
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='refreshToken',
+        summary='Làm mới access token',
+        description='Sử dụng refresh token để lấy access token mới.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'refresh': {
+                        'type': 'string',
+                        'description': 'Refresh token nhận được từ đăng nhập'
+                    }
+                },
+                'required': ['refresh']
+            }
+        },
+        responses={
+            200: {
+                'type': 'object',
+                'properties': {
+                    'token': {'type': 'string', 'description': 'Access token mới'},
+                }
+            },
+            400: {'description': 'Thiếu refresh token'},
+            401: {'description': 'Refresh token không hợp lệ hoặc hết hạn'}
+        },
+        examples=[
+            OpenApiExample(
+                'Refresh Token Request',
+                value={
+                    'refresh': 'eyJ0eXAiOiJKV1QiLCJhbGc...'
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Refresh Token Response',
+                value={
+                    'token': 'eyJ0eXAiOiJKV1QiLCJhbGc...'
+                },
+                response_only=True,
+            )
+        ],
+    )
+    def post(self, request):
+        """
+        Generate new access token from refresh token
+        """
+        refresh_token = request.data.get('refresh')
+        
+        if not refresh_token:
+            return Response(
+                {'error': 'Refresh token is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            # Validate refresh token and generate new access token
+            refresh = RefreshToken(refresh_token)
+            access_token = str(refresh.access_token)
+            
+            return Response({
+                'token': access_token
+            }, status=status.HTTP_200_OK)
+        
+        except TokenError as e:
+            return Response(
+                {'error': 'Invalid or expired refresh token'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )

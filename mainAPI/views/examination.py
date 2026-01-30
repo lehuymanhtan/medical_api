@@ -13,15 +13,28 @@ from mainAPI.serializers.examination import (
     ExaminationUpdateSerializer,
     ExaminationFinalizeSerializer
 )
-from mainAPI.permissions import IsDoctor
+from mainAPI.permissions import IsDoctor, IsDoctorOrOwnerReadOnly
 
 
 class ExaminationViewSet(viewsets.ModelViewSet):
     """
-    Examination management for doctors
+    Examination management
+    - Doctors: Full CRUD access
+    - Students: Read-only access to their own examinations
     """
-    permission_classes = [IsDoctor]
     queryset = Examination.objects.all().select_related('patient', 'doctor', 'appointment')
+    
+    def get_permissions(self):
+        """
+        Instantiate and return the list of permissions that this view requires
+        """
+        if self.action == 'retrieve':
+            # retrieve action allows students to view their own examinations
+            permission_classes = [IsDoctorOrOwnerReadOnly]
+        else:
+            # All other actions require doctor permissions
+            permission_classes = [IsDoctor]
+        return [permission() for permission in permission_classes]
     
     def get_serializer_class(self):
         """Use appropriate serializer based on action"""
@@ -37,15 +50,24 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         tags=['Doctor Workflow'],
         operation_id='createExamination',
         summary='Bắt đầu phiên khám bệnh mới',
-        description='Tạo một bản ghi khám bệnh mới cho bệnh nhân.',
+        description='Tạo một bản ghi khám bệnh mới cho bệnh nhân. appointment_id là tùy chọn (để xử lý trường hợp khẩn cấp).',
         request=ExaminationCreateSerializer,
         responses={201: ExaminationSerializer},
         examples=[
             OpenApiExample(
-                'Examination Request',
+                'Examination with Appointment',
                 value={
                     'patient_id': '123e4567-e89b-12d3-a456-426614174000',
                     'appointment_id': '223e4567-e89b-12d3-a456-426614174000'
+                },
+                request_only=True,
+            ),
+            OpenApiExample(
+                'Emergency Examination (No Appointment)',
+                value={
+                    'patient_id': '123e4567-e89b-12d3-a456-426614174000',
+                    'symptoms': 'Đau ngực cấp tính',
+                    'initial_diagnosis': 'Cần kiểm tra tim mạch ngay'
                 },
                 request_only=True,
             )

@@ -5,6 +5,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from mainAPI.views import (
     LoginView,
+    RefreshTokenView,
     UserProfileViewSet,
     PatientViewSet,
     AppointmentViewSet,
@@ -25,6 +26,7 @@ router.register(r'tickets', TicketViewSet, basename='ticket')
 urlpatterns = [
     # Authentication
     path('auth/login', LoginView.as_view(), name='login'),
+    path('auth/refresh', RefreshTokenView.as_view(), name='refresh-token'),
     
     # User profile and dashboard
     path('users/', include([
