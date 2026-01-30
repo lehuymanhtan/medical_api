@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from mainAPI.models import User, Examination
+from mainAPI.models import User, Examination, PatientProfile
 from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
 from mainAPI.permissions import IsStudent
@@ -69,4 +69,71 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         ).select_related('doctor').order_by('-examination_date')
         
         serializer = ExaminationSummarySerializer(examinations, many=True)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        tags=['Patient Dashboard'],
+        operation_id='updateMedicalSummary',
+        summary='Cập nhật thông tin y tế cá nhân',
+        description='Sinh viên có thể cập nhật nhóm máu và dị ứng của mình.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'blood_type': {
+                        'type': 'string',
+                        'enum': ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-', ''],
+                        'nullable': True,
+                        'description': 'Nhóm máu'
+                    },
+                    'allergies': {
+                        'type': 'string',
+                        'nullable': True,
+                        'description': 'Danh sách dị ứng (phân cách bằng dấu phẩy)'
+                    }
+                }
+            }
+        },
+        responses={
+            200: PatientSummarySerializer,
+            400: {'description': 'Dữ liệu không hợp lệ'},
+            403: {'description': 'Chỉ sinh viên mới có thể cập nhật'}
+        }
+    )
+    @action(detail=False, methods=['patch'], url_path='me/medical-summary', permission_classes=[IsStudent])
+    def update_medical_summary(self, request):
+        """
+        PATCH /users/me/medical-summary
+        Update medical summary for current student
+        Only blood_type and allergies can be updated
+        """
+        user = request.user
+        
+        # Get or create patient profile
+        patient_profile, created = PatientProfile.objects.get_or_create(user=user)
+        
+        # Extract allowed fields
+        blood_type = request.data.get('blood_type')
+        allergies = request.data.get('allergies')
+        
+        # Update blood_type if provided
+        if blood_type is not None:
+            if blood_type == '':
+                patient_profile.blood_type = ''
+            elif blood_type in dict(PatientProfile.BLOOD_TYPE_CHOICES):
+                patient_profile.blood_type = blood_type
+            else:
+                return Response(
+                    {'error': 'Invalid blood type'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        
+        # Update allergies if provided
+        if allergies is not None:
+            patient_profile.allergies = allergies
+        
+        patient_profile.save()
+        
+        # Return updated summary
+        serializer = PatientSummarySerializer(user)
         return Response(serializer.data)
