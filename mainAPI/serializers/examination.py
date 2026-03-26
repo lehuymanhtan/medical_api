@@ -91,8 +91,6 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
         ]
         extra_kwargs = {
             'patient_id': {'help_text': 'UUID of the student/patient.'},
