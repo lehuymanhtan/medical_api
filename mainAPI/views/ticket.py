@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from mainAPI.models import Ticket, TicketReply, AuditLog
 from mainAPI.serializers.ticket import (
     TicketSerializer,
@@ -18,10 +18,22 @@ from mainAPI.permissions import IsStudent, IsTicketParticipant
 from rest_framework.permissions import IsAuthenticated
 
 
+@extend_schema_view(
+    update=extend_schema(
+        summary='cập nhật phiếu hỗ trợ có id {id}',
+        tags=['Consulting']
+    ),
+    partial_update=extend_schema(
+        summary='Cập nhật một phần phiếu hỗ trợ',
+        tags=['Consulting']
+    )
+)
 class TicketViewSet(viewsets.ModelViewSet):
     """
     Ticket/consulting system endpoints
     """
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
+    
     def get_permissions(self):
         """Set permissions based on action"""
         if self.action == 'create':

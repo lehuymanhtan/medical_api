@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from django.db import IntegrityError
 from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
 from mainAPI.models import Appointment, AuditLog
 from mainAPI.serializers.appointment import (
@@ -17,10 +17,21 @@ from mainAPI.permissions import IsStudent, CanCancelOwnAppointment
 from rest_framework.permissions import IsAuthenticated
 
 
+@extend_schema_view(
+    retrieve=extend_schema(
+        summary='Xem chi tiết lịch hẹn',
+        tags=['Scheduling']
+    ),
+    update=extend_schema(
+        summary='cập nhật lịch hẹn có id {id}',
+        tags=['Scheduling']
+    )
+)
 class AppointmentViewSet(viewsets.ModelViewSet):
     """
     Appointment management endpoints
     """
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
     serializer_class = AppointmentSerializer
     
     def get_permissions(self):

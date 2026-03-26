@@ -5,7 +5,7 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
-from drf_spectacular.utils import extend_schema, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from mainAPI.models import Examination, AuditLog
 from mainAPI.serializers.examination import (
     ExaminationSerializer,
@@ -16,6 +16,24 @@ from mainAPI.serializers.examination import (
 from mainAPI.permissions import IsDoctor, IsDoctorOrOwnerReadOnly
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary='Danh sách phiên khám bệnh',
+        tags=['Doctor Workflow']
+    ),
+    retrieve=extend_schema(
+        summary='Xem chi tiết phiên khám',
+        tags=['Doctor Workflow']
+    ),
+    partial_update=extend_schema(
+        summary='Cập nhật một phần phiên khám',
+        tags=['Doctor Workflow']
+    ),
+    destroy=extend_schema(
+        summary='Xóa phiên khám bệnh',
+        tags=['Doctor Workflow']
+    )
+)
 class ExaminationViewSet(viewsets.ModelViewSet):
     """
     Examination management
