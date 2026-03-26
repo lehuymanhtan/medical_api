@@ -61,3 +61,5 @@ htmlcov/
 *.bak
 *.backup
 logs/
+
+*.md
