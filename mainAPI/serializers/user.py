@@ -50,6 +50,30 @@ class PatientSummarySerializer(serializers.ModelSerializer):
     last_diagnosis = serializers.SerializerMethodField()
     last_visit_date = serializers.SerializerMethodField()
     
+    age = serializers.SerializerMethodField()
+    date_of_birth = serializers.DateField(source='patient_profile.date_of_birth', read_only=True)
+    height = serializers.DecimalField(source='patient_profile.height', max_digits=5, decimal_places=2, read_only=True)
+    weight = serializers.DecimalField(source='patient_profile.weight', max_digits=5, decimal_places=2, read_only=True)
+    fasting_blood_sugar = serializers.DecimalField(source='patient_profile.fasting_blood_sugar', max_digits=5, decimal_places=2, read_only=True)
+    hba1c = serializers.DecimalField(source='patient_profile.hba1c', max_digits=5, decimal_places=2, read_only=True)
+    red_blood_cells = serializers.DecimalField(source='patient_profile.red_blood_cells', max_digits=5, decimal_places=2, read_only=True)
+    hemoglobin = serializers.DecimalField(source='patient_profile.hemoglobin', max_digits=5, decimal_places=2, read_only=True)
+    hematocrit = serializers.DecimalField(source='patient_profile.hematocrit', max_digits=5, decimal_places=2, read_only=True)
+    white_blood_cells = serializers.DecimalField(source='patient_profile.white_blood_cells', max_digits=5, decimal_places=2, read_only=True)
+    platelets = serializers.DecimalField(source='patient_profile.platelets', max_digits=5, decimal_places=2, read_only=True)
+    creatinine = serializers.DecimalField(source='patient_profile.creatinine', max_digits=5, decimal_places=2, read_only=True)
+    blood_urea_nitrogen = serializers.DecimalField(source='patient_profile.blood_urea_nitrogen', max_digits=5, decimal_places=2, read_only=True)
+    ast_sgot = serializers.DecimalField(source='patient_profile.ast_sgot', max_digits=5, decimal_places=2, read_only=True)
+    alt_sgpt = serializers.DecimalField(source='patient_profile.alt_sgpt', max_digits=5, decimal_places=2, read_only=True)
+    total_bilirubin = serializers.DecimalField(source='patient_profile.total_bilirubin', max_digits=5, decimal_places=2, read_only=True)
+    total_cholesterol = serializers.DecimalField(source='patient_profile.total_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    ldl_cholesterol = serializers.DecimalField(source='patient_profile.ldl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    hdl_cholesterol = serializers.DecimalField(source='patient_profile.hdl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    triglycerides = serializers.DecimalField(source='patient_profile.triglycerides', max_digits=5, decimal_places=2, read_only=True)
+    sodium = serializers.DecimalField(source='patient_profile.sodium', max_digits=5, decimal_places=2, read_only=True)
+    potassium = serializers.DecimalField(source='patient_profile.potassium', max_digits=5, decimal_places=2, read_only=True)
+    calcium = serializers.DecimalField(source='patient_profile.calcium', max_digits=5, decimal_places=2, read_only=True)
+    
     class Meta:
         model = User
         fields = [
@@ -60,7 +84,38 @@ class PatientSummarySerializer(serializers.ModelSerializer):
             'allergies',
             'last_diagnosis',
             'last_visit_date',
+            'age',
+            'date_of_birth',
+            'height',
+            'weight',
+            'fasting_blood_sugar',
+            'hba1c',
+            'red_blood_cells',
+            'hemoglobin',
+            'hematocrit',
+            'white_blood_cells',
+            'platelets',
+            'creatinine',
+            'blood_urea_nitrogen',
+            'ast_sgot',
+            'alt_sgpt',
+            'total_bilirubin',
+            'total_cholesterol',
+            'ldl_cholesterol',
+            'hdl_cholesterol',
+            'triglycerides',
+            'sodium',
+            'potassium',
+            'calcium',
         ]
+    
+    def get_age(self, obj) -> int:
+        from datetime import date
+        if hasattr(obj, 'patient_profile') and obj.patient_profile.date_of_birth:
+            dob = obj.patient_profile.date_of_birth
+            today = date.today()
+            return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
+        return None
     
     def get_allergies(self, obj) -> list:
         """Parse comma-separated allergies into list"""

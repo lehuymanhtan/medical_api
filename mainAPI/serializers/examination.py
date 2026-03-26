@@ -56,8 +56,6 @@ class ExaminationSerializer(serializers.ModelSerializer):
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
             'status',
             'examination_date',
             'finalized_at',
@@ -104,8 +102,6 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
             'blood_pressure': {'help_text': 'Blood pressure reading (e.g., 120/80).'},
             'heart_rate': {'help_text': 'Heart rate in beats per minute (bpm).'},
             'temperature': {'help_text': 'Body temperature in Celsius (°C).'},
-            'weight': {'help_text': 'Patient weight in kg.'},
-            'height': {'help_text': 'Patient height in cm.'},
         }
     
     def validate(self, attrs):
@@ -167,8 +163,6 @@ class ExaminationUpdateSerializer(serializers.ModelSerializer):
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
         ]
         extra_kwargs = {
             'blood_pressure': {'help_text': 'Update blood pressure reading (e.g., 120/80).'},

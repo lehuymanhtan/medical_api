@@ -105,7 +105,6 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         """
         PATCH /users/me/medical-summary
         Update medical summary for current student
-        Only blood_type and allergies can be updated
         """
         user = request.user
         
@@ -115,6 +114,22 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         # Extract allowed fields
         blood_type = request.data.get('blood_type')
         allergies = request.data.get('allergies')
+        
+        # Extract and update new fields
+        ALLOWED_FIELDS = [
+            'date_of_birth', 'height', 'weight', 'fasting_blood_sugar', 'hba1c', 
+            'red_blood_cells', 'hemoglobin', 'hematocrit', 'white_blood_cells', 
+            'platelets', 'creatinine', 'blood_urea_nitrogen', 'ast_sgot', 
+            'alt_sgpt', 'total_bilirubin', 'total_cholesterol', 'ldl_cholesterol', 
+            'hdl_cholesterol', 'triglycerides', 'sodium', 'potassium', 'calcium'
+        ]
+        
+        for field in ALLOWED_FIELDS:
+            if field in request.data:
+                val = request.data.get(field)
+                if val == "":
+                    val = None
+                setattr(patient_profile, field, val)
         
         # Update blood_type if provided
         if blood_type is not None:

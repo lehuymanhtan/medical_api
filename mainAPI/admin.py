@@ -78,7 +78,7 @@ class ExaminationAdmin(admin.ModelAdmin):
         ('Examination Info', {'fields': ('patient', 'doctor', 'appointment', 'status')}),
         ('Clinical Data', {'fields': ('symptoms', 'initial_diagnosis', 'notes')}),
         ('Final Diagnosis', {'fields': ('final_diagnosis', 'prescription')}),
-        ('Vital Signs', {'fields': ('blood_pressure', 'heart_rate', 'temperature', 'weight', 'height')}),
+        ('Vital Signs', {'fields': ('blood_pressure', 'heart_rate', 'temperature')}),
         ('Timestamps', {'fields': ('examination_date', 'finalized_at', 'created_at', 'updated_at')}),
     )
 

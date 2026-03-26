@@ -67,6 +67,29 @@ class PatientProfile(models.Model):
     )
     chronic_conditions = models.TextField(blank=True)
     
+    date_of_birth = models.DateField(null=True, blank=True)
+    height = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
+    weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
+    fasting_blood_sugar = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hba1c = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    red_blood_cells = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hemoglobin = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hematocrit = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    white_blood_cells = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    platelets = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    creatinine = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    blood_urea_nitrogen = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    ast_sgot = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    alt_sgpt = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    total_bilirubin = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    total_cholesterol = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    ldl_cholesterol = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    hdl_cholesterol = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    triglycerides = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    sodium = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    potassium = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    calcium = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     
@@ -206,20 +229,6 @@ class Examination(models.Model):
         null=True, 
         blank=True,
         validators=[MinValueValidator(30.0), MaxValueValidator(45.0)]
-    )
-    weight = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        validators=[MinValueValidator(0)]
-    )
-    height = models.DecimalField(
-        max_digits=5, 
-        decimal_places=2, 
-        null=True, 
-        blank=True,
-        validators=[MinValueValidator(0)]
     )
     
     status = models.CharField(
