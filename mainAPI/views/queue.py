@@ -5,7 +5,7 @@ from django.utils import timezone
 from django.db.models import Max
 from django.db import transaction
 from rest_framework.permissions import IsAuthenticated
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from mainAPI.models import QueueEntry
 from mainAPI.serializers.queue import (
     QueueEntrySerializer, 
@@ -14,6 +14,23 @@ from mainAPI.serializers.queue import (
 )
 from mainAPI.utils.fcm import send_fcm_notification
 
+@extend_schema_view(
+    list=extend_schema(
+        tags=['Queue'],
+        summary='Danh sách hàng đợi hôm nay',
+        description='Lấy danh sách tất cả các số thứ tự được xếp hàng trong ngày hôm nay. Mặc định chỉ lấy các phiếu của ngày hiện tại.'
+    ),
+    retrieve=extend_schema(
+        tags=['Queue'],
+        summary='Lấy thông tin chi tiết một số thứ tự',
+        description='Xem thông tin chi tiết của một số thứ tự cụ thể trong hàng đợi.'
+    ),
+    partial_update=extend_schema(
+        tags=['Queue'],
+        summary='Cập nhật trạng thái số thứ tự',
+        description='Bác sĩ/Admin có thể cập nhật các trạng thái (như WAITING, CALLED, CANCELLED).'
+    )
+)
 class QueueEntryViewSet(viewsets.ModelViewSet):
     """
     Queue management endpoints
@@ -22,7 +39,7 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
     
     def get_permissions(self):
         # We allow authenticated users to view the queue and join it.
-        # Calling patients might need DOCTOR/ADMIN permission (omitted detailed RBAC for brevity, but could use IsDoctor)
+        # Specific restrictions (e.g. for update or call_patient) are handled in the methods.
         return [IsAuthenticated()]
         
     def get_queryset(self):
@@ -33,9 +50,48 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == 'create':
             return QueueEntryCreateSerializer
-        elif self.action == 'partial_update' or self.action == 'call_next':
+        elif self.action in ['partial_update', 'update', 'call_next']:
             return QueueEntryStatusUpdateSerializer
         return QueueEntrySerializer
+
+    def update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+        return self.partial_update(request, *args, **kwargs)
+        
+    def partial_update(self, request, *args, **kwargs):
+        user = request.user
+        
+        # Only Admin and Doctor can manually update using generic patch mechanism
+        if user.role not in ['DOCTOR', 'ADMIN']:
+            return Response({'error': 'Chỉ nhân viên y tế mới có quyền cập nhật thủ công. Học sinh vui lòng sử dụng API Cancel nếu muốn hủy.'}, status=status.HTTP_403_FORBIDDEN)
+                
+        return super().partial_update(request, *args, **kwargs)
+
+    @extend_schema(
+        tags=['Queue'],
+        summary='Hủy số thứ tự',
+        description='Cho phép sinh viên tự hủy số thứ tự của chính mình.',
+        request=None,
+        responses={200: QueueEntrySerializer}
+    )
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        queue_entry = self.get_object()
+        user = request.user
+        
+        if user.role != 'STUDENT':
+            return Response({'error': 'Chỉ sinh viên mới có thể sử dụng chức năng tự hủy phiếu.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        if queue_entry.patient != user:
+            return Response({'error': 'Bạn chỉ có thể hủy số thứ tự của chính mình.'}, status=status.HTTP_403_FORBIDDEN)
+            
+        if queue_entry.status != QueueEntry.Status.WAITING:
+            return Response({'error': 'Chỉ có thể hủy khi đang chờ khám.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        queue_entry.status = QueueEntry.Status.CANCELLED
+        queue_entry.save()
+        
+        return Response(QueueEntrySerializer(queue_entry).data, status=status.HTTP_200_OK)
 
     @extend_schema(
         tags=['Queue'],

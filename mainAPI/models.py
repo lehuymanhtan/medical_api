@@ -529,7 +529,6 @@ class QueueEntry(models.Model):
     class Status(models.TextChoices):
         WAITING = 'WAITING', 'Waiting'
         CALLED = 'CALLED', 'Called'
-        COMPLETED = 'COMPLETED', 'Completed'
         CANCELLED = 'CANCELLED', 'Cancelled'
         
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
