@@ -21,6 +21,12 @@ class LoginResponseSerializer(serializers.Serializer):
         return UserProfileSerializer(obj.get('user')).data
 
 
+class ChangePasswordRequestSerializer(serializers.Serializer):
+    """Serializer for change password request"""
+    old_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'}, help_text="Mật khẩu cũ")
+    new_password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'}, help_text="Mật khẩu mới")
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """
     Serializer for user profile data
@@ -33,6 +39,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'full_name',
             'role',
             'student_id',
+            'cohort',
+            'class_name',
             'email',
             'phone_number',
             'created_at',

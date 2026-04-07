@@ -4,7 +4,7 @@ Authentication Views
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
@@ -12,7 +12,8 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 from mainAPI.serializers.user import (
     UserProfileSerializer,
     LoginRequestSerializer,
-    LoginResponseSerializer
+    LoginResponseSerializer,
+    ChangePasswordRequestSerializer
 )
 from mainAPI.models import AuditLog
 
@@ -193,3 +194,76 @@ class RefreshTokenView(APIView):
                 {'error': 'Invalid or expired refresh token'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+
+class ChangePasswordView(APIView):
+    """
+    Change user password endpoint
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='changePassword',
+        summary='Đổi mật khẩu người dùng',
+        description='Cho phép người dùng đã xác thực thay đổi mật khẩu của họ.',
+        request=ChangePasswordRequestSerializer,
+        responses={
+            200: {'description': 'Đổi mật khẩu thành công'},
+            400: {'description': 'Mật khẩu cũ không chính xác hoặc dữ liệu không hợp lệ'}
+        },
+        examples=[
+            OpenApiExample(
+                'Change Password Request',
+                value={
+                    'old_password': 'currentpassword123',
+                    'new_password': 'newpassword123'
+                },
+                request_only=True,
+            )
+        ]
+    )
+    def post(self, request):
+        serializer = ChangePasswordRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            old_password = serializer.validated_data.get('old_password')
+            new_password = serializer.validated_data.get('new_password')
+            
+            user = request.user
+            if not user.check_password(old_password):
+                return Response(
+                    {'error': 'Mật khẩu cũ không chính xác'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Set the new password and save the user
+            user.set_password(new_password)
+            user.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=user,
+                action='USER_CHANGE_PASSWORD',  # Using string since we didn't add it to Action choices, or we can just use generic if Action is restricted. Wait, Action choices in Audit log are restricted.
+                model_name='User',
+                object_id=user.id,
+                object_repr=str(user),
+                ip_address=self.get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            )
+            
+            return Response(
+                {'message': 'Đổi mật khẩu thành công'},
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get_client_ip(self, request):
+        """Extract client IP address from request"""
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip = x_forwarded_for.split(',')[0]
+        else:
+            ip = request.META.get('REMOTE_ADDR')
+        return ip
+

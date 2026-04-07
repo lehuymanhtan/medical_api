@@ -1,7 +1,7 @@
 """
 Views package
 """
-from .auth import LoginView, RefreshTokenView
+from .auth import LoginView, RefreshTokenView, ChangePasswordView
 from .user import UserProfileViewSet
 from .patient import PatientViewSet
 from .appointment import AppointmentViewSet
@@ -12,6 +12,7 @@ from .utility import ImageUploadView
 __all__ = [
     'LoginView',
     'RefreshTokenView',
+    'ChangePasswordView',
     'UserProfileViewSet',
     'PatientViewSet',
     'AppointmentViewSet',

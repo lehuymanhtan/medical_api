@@ -19,6 +19,8 @@ class User(AbstractUser):
     full_name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=Role.choices)
     student_id = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    cohort = models.CharField(max_length=50, blank=True)
+    class_name = models.CharField(max_length=50, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     email = models.EmailField(unique=True)
     
@@ -457,6 +459,7 @@ class AuditLog(models.Model):
         # User actions
         USER_LOGIN = 'USER_LOGIN', 'User Login'
         USER_LOGOUT = 'USER_LOGOUT', 'User Logout'
+        USER_CHANGE_PASSWORD = 'USER_CHANGE_PASSWORD', 'User Change Password'
     
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     

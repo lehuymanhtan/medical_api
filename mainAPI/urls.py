@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from mainAPI.views import (
     LoginView,
     RefreshTokenView,
+    ChangePasswordView,
     UserProfileViewSet,
     PatientViewSet,
     AppointmentViewSet,
@@ -31,6 +32,7 @@ urlpatterns = [
     # Authentication
     path('auth/login', LoginView.as_view(), name='login'),
     path('auth/refresh', RefreshTokenView.as_view(), name='refresh-token'),
+    path('auth/change-password', ChangePasswordView.as_view(), name='change-password'),
     
     # User profile and dashboard
     path('users/', include([
