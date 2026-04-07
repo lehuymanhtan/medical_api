@@ -13,6 +13,8 @@ from mainAPI.views import (
     TicketViewSet,
     ImageUploadView
 )
+from mainAPI.views.queue import QueueEntryViewSet
+from mainAPI.views.notification import FCMDeviceTokenViewSet
 
 # Create router for viewsets
 router = DefaultRouter()
@@ -21,6 +23,8 @@ router = DefaultRouter()
 router.register(r'appointments', AppointmentViewSet, basename='appointment')
 router.register(r'examinations', ExaminationViewSet, basename='examination')
 router.register(r'tickets', TicketViewSet, basename='ticket')
+router.register(r'queues', QueueEntryViewSet, basename='queue')
+router.register(r'registerNotification', FCMDeviceTokenViewSet, basename='notification')
 
 # URL patterns
 urlpatterns = [
