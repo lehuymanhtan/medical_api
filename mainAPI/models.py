@@ -15,6 +15,11 @@ class User(AbstractUser):
         DOCTOR = 'DOCTOR', 'Doctor'
         ADMIN = 'ADMIN', 'Admin'
     
+    class Sex(models.TextChoices):
+        MALE = 'MALE', 'Male'
+        FEMALE = 'FEMALE', 'Female'
+        OTHER = 'OTHER', 'Other'
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     full_name = models.CharField(max_length=255)
     role = models.CharField(max_length=20, choices=Role.choices)
@@ -23,6 +28,9 @@ class User(AbstractUser):
     class_name = models.CharField(max_length=50, blank=True)
     phone_number = models.CharField(max_length=20, blank=True)
     email = models.EmailField(unique=True)
+    date_of_birth = models.DateField(null=True, blank=True)
+    sex = models.CharField(max_length=10, choices=Sex.choices, blank=True)
+    address = models.TextField(blank=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

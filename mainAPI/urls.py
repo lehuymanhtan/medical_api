@@ -12,7 +12,9 @@ from mainAPI.views import (
     AppointmentViewSet,
     ExaminationViewSet,
     TicketViewSet,
-    ImageUploadView
+    ImageUploadView,
+    AdminCreateAccountView,
+    AdminBatchCreateAccountView,
 )
 from mainAPI.views.queue import QueueEntryViewSet
 from mainAPI.views.notification import FCMDeviceTokenViewSet
@@ -49,6 +51,10 @@ urlpatterns = [
     
     # File upload
     path('upload/image', ImageUploadView.as_view(), name='upload-image'),
+    
+    # Admin account management
+    path('admin/accounts/create', AdminCreateAccountView.as_view(), name='admin-create-account'),
+    path('admin/accounts/batch-create', AdminBatchCreateAccountView.as_view(), name='admin-batch-create-account'),
     
     # Router URLs (appointments, examinations, tickets)
     path('', include(router.urls)),

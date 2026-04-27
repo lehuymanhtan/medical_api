@@ -43,6 +43,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'class_name',
             'email',
             'phone_number',
+            'date_of_birth',
+            'sex',
+            'address',
             'created_at',
         ]
         read_only_fields = ['id', 'created_at']
@@ -150,3 +153,84 @@ class PatientSummarySerializer(serializers.ModelSerializer):
         if last_exam:
             return last_exam.examination_date.date()
         return None
+
+
+class CreateAccountSerializer(serializers.Serializer):
+    """
+    Serializer for admin to create a new user account.
+    Accepts: username, name, cohort, class_name, password.
+    Optional: date_of_birth, sex, address, email, phone_number, role.
+    """
+    username = serializers.CharField(required=True, help_text="Django username (used for login)")
+    name = serializers.CharField(required=True, help_text="Full name of the user")
+    cohort = serializers.CharField(required=False, default='', allow_blank=True)
+    class_name = serializers.CharField(required=False, default='', allow_blank=True)
+    password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    phone_number = serializers.CharField(required=False, default='', allow_blank=True)
+    date_of_birth = serializers.DateField(required=False, allow_null=True, default=None)
+    sex = serializers.ChoiceField(choices=User.Sex.choices, required=False, allow_blank=True, default='')
+    address = serializers.CharField(required=False, allow_blank=True, default='', style={'base_template': 'textarea.html'})
+    role = serializers.ChoiceField(choices=User.Role.choices, required=False, default=User.Role.STUDENT)
+
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError(f"Username '{value}' already exists.")
+        return value
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email=value).exists():
+            raise serializers.ValidationError(f"Email '{value}' is already in use.")
+        return value
+
+    def create(self, validated_data):
+        from mainAPI.models import PatientProfile
+        import uuid
+
+        username = validated_data['username']
+        email = validated_data.get('email') or f"{username}@placeholder.local"
+        role = validated_data.get('role', User.Role.STUDENT)
+
+        user = User(
+            username=username,
+            full_name=validated_data['name'],
+            cohort=validated_data.get('cohort', ''),
+            class_name=validated_data.get('class_name', ''),
+            email=email,
+            phone_number=validated_data.get('phone_number', ''),
+            date_of_birth=validated_data.get('date_of_birth'),
+            sex=validated_data.get('sex', ''),
+            address=validated_data.get('address', ''),
+            role=role,
+            student_id=username if role == User.Role.STUDENT else None,
+        )
+        user.set_password(validated_data['password'])
+        user.save()
+
+        # Auto-create PatientProfile for students
+        if role == User.Role.STUDENT:
+            PatientProfile.objects.get_or_create(user=user)
+
+        return user
+
+
+class BatchCreateAccountSerializer(serializers.Serializer):
+    """
+    Serializer for batch account creation.
+    Accepts a list of CreateAccountSerializer-compatible objects.
+    """
+    accounts = CreateAccountSerializer(many=True)
+
+    def validate_accounts(self, value):
+        if not value:
+            raise serializers.ValidationError("At least one account must be provided.")
+        return value
+
+    def create(self, validated_data):
+        created_users = []
+        for account_data in validated_data['accounts']:
+            serializer = CreateAccountSerializer(data=account_data)
+            # Already validated; call create directly
+            user = CreateAccountSerializer().create(account_data)
+            created_users.append(user)
+        return created_users

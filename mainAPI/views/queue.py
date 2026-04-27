@@ -167,3 +167,38 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
             send_fcm_notification(upcoming_entry.patient, upcoming_title, upcoming_body, data={'queue_id': str(upcoming_entry.id)})
         
         return Response(QueueEntrySerializer(queue_entry).data, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        tags=['Queue'],
+        operation_id='getCurrentQueue',
+        summary='Lấy số đang được gọi (current queue)',
+        description=(
+            'Trả về số thứ tự đang được gọi hiện tại trong ngày hôm nay. '
+            'Đây là số thứ tự có trạng thái CALLED gần nhất. '
+            'Trả về null nếu chưa có số nào được gọi.'
+        ),
+        responses={200: QueueEntrySerializer},
+        request=None,
+    )
+    @action(detail=False, methods=['get'], url_path='current')
+    def current_queue(self, request):
+        """
+        GET /queues/current
+        Returns the most recently called queue entry for today,
+        or null if no entry has been called yet.
+        """
+        today = timezone.now().date()
+        current_entry = (
+            QueueEntry.objects
+            .filter(date=today, status=QueueEntry.Status.CALLED)
+            .order_by('-number')
+            .first()
+        )
+
+        if current_entry is None:
+            return Response({'current': None}, status=status.HTTP_200_OK)
+
+        return Response(
+            {'current': QueueEntrySerializer(current_entry).data},
+            status=status.HTTP_200_OK,
+        )
