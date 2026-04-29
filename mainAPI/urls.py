@@ -38,8 +38,11 @@ urlpatterns = [
     
     # User profile and dashboard
     path('users/', include([
-        path('me', UserProfileViewSet.as_view({'get': 'get_profile'}), name='user-profile'),
-        path('me/medical-summary', UserProfileViewSet.as_view({'get': 'medical_summary'}), name='user-medical-summary'),
+        path('me', UserProfileViewSet.as_view({'get': 'get_profile', 'post': 'get_profile'}), name='user-profile'),
+        path('me/medical-summary', UserProfileViewSet.as_view({
+            'get': 'medical_summary',
+            'patch': 'update_medical_summary'
+        }), name='user-medical-summary'),
         path('me/examinations', UserProfileViewSet.as_view({'get': 'my_examinations'}), name='user-examinations'),
     ])),
     

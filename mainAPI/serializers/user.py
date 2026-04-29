@@ -48,7 +48,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'address',
             'created_at',
         ]
-        read_only_fields = ['id', 'created_at']
+        read_only_fields = ['id', 'created_at', 'role', 'student_id', 'email', 'phone_number']
 
 
 class PatientSummarySerializer(serializers.ModelSerializer):

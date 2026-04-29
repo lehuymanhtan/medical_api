@@ -19,18 +19,38 @@ class UserProfileViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     
     @extend_schema(
+        methods=['GET'],
         tags=['Patient Dashboard'],
         operation_id='getUserProfile',
         summary='Lấy hồ sơ người dùng hiện tại',
         description='Trả về thông tin hồ sơ bao gồm UUID tĩnh để tạo mã QR.',
         responses={200: UserProfileSerializer}
     )
-    @action(detail=False, methods=['get'], url_path='me')
+    @extend_schema(
+        methods=['POST'],
+        tags=['Patient Dashboard'],
+        operation_id='updateUserProfile',
+        summary='Cập nhật hồ sơ người dùng hiện tại',
+        description='Cập nhật thông tin cá nhân. Các trường role, student_id, email, và phone_number không thể thay đổi.',
+        request=UserProfileSerializer,
+        responses={
+            200: UserProfileSerializer,
+            400: {'description': 'Dữ liệu không hợp lệ'}
+        }
+    )
+    @action(detail=False, methods=['get', 'post'], url_path='me')
     def get_profile(self, request):
         """
-        GET /users/me
-        Get current user's profile
+        GET, POST /users/me
+        Get or update current user's profile
         """
+        if request.method == 'POST':
+            serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
     
