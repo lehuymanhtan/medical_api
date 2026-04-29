@@ -87,7 +87,12 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         examinations = Examination.objects.filter(
             patient=request.user
         ).select_related('doctor').order_by('-examination_date')
-        
+
+        page = self.paginate_queryset(examinations)
+        if page is not None:
+            serializer = ExaminationSummarySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = ExaminationSummarySerializer(examinations, many=True)
         return Response(serializer.data)
     

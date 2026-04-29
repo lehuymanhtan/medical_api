@@ -2,7 +2,33 @@
 User and Patient Profile Serializers
 """
 from rest_framework import serializers
-from mainAPI.models import User, PatientProfile, DoctorProfile
+from mainAPI.models import User, PatientProfile, DoctorProfile, Examination
+
+
+class ProfileCharField(serializers.CharField):
+    def __init__(self, profile_attr, **kwargs):
+        self.profile_attr = profile_attr
+        super().__init__(**kwargs)
+
+    def get_attribute(self, instance):
+        try:
+            profile = instance.patient_profile
+        except PatientProfile.DoesNotExist:
+            return None
+        return getattr(profile, self.profile_attr, None)
+
+
+class ProfileDecimalField(serializers.DecimalField):
+    def __init__(self, profile_attr, **kwargs):
+        self.profile_attr = profile_attr
+        super().__init__(**kwargs)
+
+    def get_attribute(self, instance):
+        try:
+            profile = instance.patient_profile
+        except PatientProfile.DoesNotExist:
+            return None
+        return getattr(profile, self.profile_attr, None)
 
 
 class LoginRequestSerializer(serializers.Serializer):
@@ -50,40 +76,47 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'role', 'student_id', 'email', 'phone_number']
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        email_value = data.get('email')
+        if email_value and email_value.endswith('@placeholder.local'):
+            data['email'] = ''
+        return data
+
 
 class PatientSummarySerializer(serializers.ModelSerializer):
     """
     Medical summary for patients
     Includes patient profile data
     """
-    blood_type = serializers.CharField(source='patient_profile.blood_type', read_only=True)
+    blood_type = ProfileCharField(profile_attr='blood_type', read_only=True)
     allergies = serializers.SerializerMethodField()
     last_diagnosis = serializers.SerializerMethodField()
     last_visit_date = serializers.SerializerMethodField()
     
     age = serializers.SerializerMethodField()
     date_of_birth = serializers.DateField(read_only=True)
-    height = serializers.DecimalField(source='patient_profile.height', max_digits=5, decimal_places=2, read_only=True)
-    weight = serializers.DecimalField(source='patient_profile.weight', max_digits=5, decimal_places=2, read_only=True)
-    fasting_blood_sugar = serializers.DecimalField(source='patient_profile.fasting_blood_sugar', max_digits=5, decimal_places=2, read_only=True)
-    hba1c = serializers.DecimalField(source='patient_profile.hba1c', max_digits=5, decimal_places=2, read_only=True)
-    red_blood_cells = serializers.DecimalField(source='patient_profile.red_blood_cells', max_digits=5, decimal_places=2, read_only=True)
-    hemoglobin = serializers.DecimalField(source='patient_profile.hemoglobin', max_digits=5, decimal_places=2, read_only=True)
-    hematocrit = serializers.DecimalField(source='patient_profile.hematocrit', max_digits=5, decimal_places=2, read_only=True)
-    white_blood_cells = serializers.DecimalField(source='patient_profile.white_blood_cells', max_digits=5, decimal_places=2, read_only=True)
-    platelets = serializers.DecimalField(source='patient_profile.platelets', max_digits=5, decimal_places=2, read_only=True)
-    creatinine = serializers.DecimalField(source='patient_profile.creatinine', max_digits=5, decimal_places=2, read_only=True)
-    blood_urea_nitrogen = serializers.DecimalField(source='patient_profile.blood_urea_nitrogen', max_digits=5, decimal_places=2, read_only=True)
-    ast_sgot = serializers.DecimalField(source='patient_profile.ast_sgot', max_digits=5, decimal_places=2, read_only=True)
-    alt_sgpt = serializers.DecimalField(source='patient_profile.alt_sgpt', max_digits=5, decimal_places=2, read_only=True)
-    total_bilirubin = serializers.DecimalField(source='patient_profile.total_bilirubin', max_digits=5, decimal_places=2, read_only=True)
-    total_cholesterol = serializers.DecimalField(source='patient_profile.total_cholesterol', max_digits=5, decimal_places=2, read_only=True)
-    ldl_cholesterol = serializers.DecimalField(source='patient_profile.ldl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
-    hdl_cholesterol = serializers.DecimalField(source='patient_profile.hdl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
-    triglycerides = serializers.DecimalField(source='patient_profile.triglycerides', max_digits=5, decimal_places=2, read_only=True)
-    sodium = serializers.DecimalField(source='patient_profile.sodium', max_digits=5, decimal_places=2, read_only=True)
-    potassium = serializers.DecimalField(source='patient_profile.potassium', max_digits=5, decimal_places=2, read_only=True)
-    calcium = serializers.DecimalField(source='patient_profile.calcium', max_digits=5, decimal_places=2, read_only=True)
+    height = ProfileDecimalField(profile_attr='height', max_digits=5, decimal_places=2, read_only=True)
+    weight = ProfileDecimalField(profile_attr='weight', max_digits=5, decimal_places=2, read_only=True)
+    fasting_blood_sugar = ProfileDecimalField(profile_attr='fasting_blood_sugar', max_digits=5, decimal_places=2, read_only=True)
+    hba1c = ProfileDecimalField(profile_attr='hba1c', max_digits=5, decimal_places=2, read_only=True)
+    red_blood_cells = ProfileDecimalField(profile_attr='red_blood_cells', max_digits=5, decimal_places=2, read_only=True)
+    hemoglobin = ProfileDecimalField(profile_attr='hemoglobin', max_digits=5, decimal_places=2, read_only=True)
+    hematocrit = ProfileDecimalField(profile_attr='hematocrit', max_digits=5, decimal_places=2, read_only=True)
+    white_blood_cells = ProfileDecimalField(profile_attr='white_blood_cells', max_digits=5, decimal_places=2, read_only=True)
+    platelets = ProfileDecimalField(profile_attr='platelets', max_digits=5, decimal_places=2, read_only=True)
+    creatinine = ProfileDecimalField(profile_attr='creatinine', max_digits=5, decimal_places=2, read_only=True)
+    blood_urea_nitrogen = ProfileDecimalField(profile_attr='blood_urea_nitrogen', max_digits=5, decimal_places=2, read_only=True)
+    ast_sgot = ProfileDecimalField(profile_attr='ast_sgot', max_digits=5, decimal_places=2, read_only=True)
+    alt_sgpt = ProfileDecimalField(profile_attr='alt_sgpt', max_digits=5, decimal_places=2, read_only=True)
+    total_bilirubin = ProfileDecimalField(profile_attr='total_bilirubin', max_digits=5, decimal_places=2, read_only=True)
+    total_cholesterol = ProfileDecimalField(profile_attr='total_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    ldl_cholesterol = ProfileDecimalField(profile_attr='ldl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    hdl_cholesterol = ProfileDecimalField(profile_attr='hdl_cholesterol', max_digits=5, decimal_places=2, read_only=True)
+    triglycerides = ProfileDecimalField(profile_attr='triglycerides', max_digits=5, decimal_places=2, read_only=True)
+    sodium = ProfileDecimalField(profile_attr='sodium', max_digits=5, decimal_places=2, read_only=True)
+    potassium = ProfileDecimalField(profile_attr='potassium', max_digits=5, decimal_places=2, read_only=True)
+    calcium = ProfileDecimalField(profile_attr='calcium', max_digits=5, decimal_places=2, read_only=True)
     
     class Meta:
         model = User
@@ -129,14 +162,16 @@ class PatientSummarySerializer(serializers.ModelSerializer):
         return None
     
     def get_allergies(self, obj) -> list:
-        if hasattr(obj, 'patient_profile') and obj.patient_profile.allergies:
-            return obj.patient_profile.allergies
-        return []
+        try:
+            profile = obj.patient_profile
+        except PatientProfile.DoesNotExist:
+            return []
+        return profile.allergies or []
     
     def _get_last_exam(self, obj):
         if not hasattr(obj, '_last_exam_cached'):
             obj._last_exam_cached = obj.examinations_as_patient.filter(
-                status='COMPLETED'
+                status=Examination.Status.COMPLETED
             ).order_by('-examination_date').first()
         return obj._last_exam_cached
 
@@ -216,9 +251,6 @@ class CreateAccountSerializer(serializers.Serializer):
         return value
 
     def create(self, validated_data):
-        from mainAPI.models import PatientProfile
-        import uuid
-
         username = validated_data['username']
         email = validated_data.get('email') or f"{username}@placeholder.local"
         role = validated_data.get('role', User.Role.STUDENT)

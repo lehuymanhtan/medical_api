@@ -7,7 +7,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from mainAPI.models import Appointment, AuditLog
+from mainAPI.models import Appointment, AuditLog, User
 from mainAPI.serializers.appointment import (
     AppointmentSerializer,
     AppointmentCreateSerializer,
@@ -49,17 +49,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user role"""
         user = self.request.user
         
-        if user.role == 'STUDENT':
+        if user.role == User.Role.STUDENT:
             # Students see only their own appointments
             return Appointment.objects.filter(patient=user).select_related('patient')
-        elif user.role == 'DOCTOR':
+        elif user.role == User.Role.DOCTOR:
             # Doctors see upcoming, non-completed appointments
             return Appointment.objects.filter(
                 appointment_date__gte=timezone.now().date()
             ).exclude(
-                status='COMPLETED'
+                status=Appointment.Status.COMPLETED
             ).select_related('patient')
-        elif user.role == 'ADMIN':
+        elif user.role == User.Role.ADMIN:
             # Admins see all appointments
             return Appointment.objects.all().select_related('patient')
         
@@ -209,12 +209,12 @@ Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.''',
         updated_appointment = serializer.save()
         
         # Determine audit action
-        if updated_appointment.status == 'CANCELLED':
+        if updated_appointment.status == Appointment.Status.CANCELLED:
             audit_action = AuditLog.Action.APPOINTMENT_CANCELLED
-        elif updated_appointment.status == 'COMPLETED':
+        elif updated_appointment.status == Appointment.Status.COMPLETED:
             audit_action = AuditLog.Action.APPOINTMENT_COMPLETED
         else:
-            audit_action = AuditLog.Action.APPOINTMENT_CREATED  # Generic update
+            audit_action = AuditLog.Action.APPOINTMENT_UPDATED
         
         # Create audit log
         AuditLog.objects.create(
@@ -229,7 +229,7 @@ Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.''',
             },
             additional_data={
                 'cancellation_reason': updated_appointment.cancellation_reason,
-            } if updated_appointment.status == 'CANCELLED' else {},
+            } if updated_appointment.status == Appointment.Status.CANCELLED else {},
             ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )

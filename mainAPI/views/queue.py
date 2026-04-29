@@ -6,7 +6,7 @@ from django.db.models import Max
 from django.db import transaction, IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from mainAPI.models import QueueEntry
+from mainAPI.models import QueueEntry, User
 from mainAPI.serializers.queue import (
     QueueEntrySerializer, 
     QueueEntryCreateSerializer, 
@@ -62,7 +62,7 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
         user = request.user
         
         # Only Admin and Doctor can manually update using generic patch mechanism
-        if user.role not in ['DOCTOR', 'ADMIN']:
+        if user.role not in [User.Role.DOCTOR, User.Role.ADMIN]:
             return Response({'error': 'Chỉ nhân viên y tế mới có quyền cập nhật thủ công. Học sinh vui lòng sử dụng API Cancel nếu muốn hủy.'}, status=status.HTTP_403_FORBIDDEN)
                 
         return super().partial_update(request, *args, **kwargs)
@@ -79,7 +79,7 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
         queue_entry = self.get_object()
         user = request.user
         
-        if user.role != 'STUDENT':
+        if user.role != User.Role.STUDENT:
             return Response({'error': 'Chỉ sinh viên mới có thể sử dụng chức năng tự hủy phiếu.'}, status=status.HTTP_403_FORBIDDEN)
             
         if queue_entry.patient != user:
@@ -100,13 +100,15 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
     )
     def create(self, request, *args, **kwargs):
         user = request.user
-        if user.role != 'STUDENT':
+        if user.role != User.Role.STUDENT:
             return Response({'error': 'Only students can take a number.'}, status=status.HTTP_403_FORBIDDEN)
             
         today = timezone.now().date()
         
         # Ensure user hasn't already taken a number today that is not cancelled
-        existing = QueueEntry.objects.filter(patient=user, date=today).exclude(status='CANCELLED').first()
+        existing = QueueEntry.objects.filter(patient=user, date=today).exclude(
+            status=QueueEntry.Status.CANCELLED
+        ).first()
         if existing:
             return Response(
                 {'error': 'You already have a valid number for today.', 'number': existing.number},
@@ -143,7 +145,7 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
         queue_entry = self.get_object()
         
         # Check permissions for doctor
-        if request.user.role not in ['DOCTOR', 'ADMIN']:
+        if request.user.role not in [User.Role.DOCTOR, User.Role.ADMIN]:
             return Response({'error': 'Only staff can call next.'}, status=status.HTTP_403_FORBIDDEN)
             
         if queue_entry.status != QueueEntry.Status.WAITING:

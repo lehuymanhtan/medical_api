@@ -30,6 +30,7 @@ class ImageUploadSerializer(serializers.ModelSerializer):
         
         # Validate MIME type using python-magic
         mime = magic.from_buffer(value.read(1024), mime=True)
+        self._detected_mime = mime
         value.seek(0)  # Reset file pointer
         
         allowed_mimes = ['image/jpeg', 'image/png']
@@ -45,8 +46,10 @@ class ImageUploadSerializer(serializers.ModelSerializer):
         file_obj = validated_data['file']
         
         # Get MIME type
-        mime = magic.from_buffer(file_obj.read(1024), mime=True)
-        file_obj.seek(0)
+        mime = getattr(self, '_detected_mime', None)
+        if not mime:
+            mime = magic.from_buffer(file_obj.read(1024), mime=True)
+            file_obj.seek(0)
         
         # Create the record
         uploaded_file = UploadedFile.objects.create(

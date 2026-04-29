@@ -23,8 +23,6 @@ django-cors-headers
 # API documentation
 drf-spectacular
 
-# Rate limiting
-django-ratelimit
 
 # Development tools
 django-debug-toolbar
@@ -38,8 +36,6 @@ pytz
 # Production WSGI server
 gunicorn
 
-# Production security
-django-environ
 
 # Database connection pooling
 django-db-connection-pool

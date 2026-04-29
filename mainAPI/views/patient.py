@@ -19,7 +19,9 @@ class PatientViewSet(viewsets.GenericViewSet):
     Patient lookup and history views for doctors
     """
     permission_classes = [IsDoctor]
-    queryset = User.objects.filter(role='STUDENT').select_related('patient_profile')
+    queryset = User.objects.filter(
+        role=User.Role.STUDENT
+    ).select_related('patient_profile').prefetch_related('examinations_as_patient')
     
     @extend_schema(
         tags=['Doctor Workflow'],

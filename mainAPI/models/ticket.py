@@ -20,7 +20,7 @@ class Ticket(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='created_tickets',
-        limit_choices_to={'role': 'STUDENT'}
+        limit_choices_to={'role': User.Role.STUDENT}
     )
     assigned_to = models.ForeignKey(
         User,
@@ -28,7 +28,7 @@ class Ticket(models.Model):
         null=True,
         blank=True,
         related_name='assigned_tickets',
-        limit_choices_to={'role__in': ['DOCTOR', 'ADMIN']}
+        limit_choices_to={'role__in': [User.Role.DOCTOR, User.Role.ADMIN]}
     )
 
     subject = models.CharField(max_length=255)
@@ -107,12 +107,20 @@ class TicketReply(models.Model):
         return f"Reply by {self.author.full_name} on Ticket #{self.ticket.id}"
 
     def save(self, *args, **kwargs):
-        # Auto-set is_staff_reply based on author's role
-        if self.author.role in [User.Role.DOCTOR, User.Role.ADMIN]:
+        is_new = self.pk is None
+
+        # Auto-set is_staff_reply only on creation
+        if is_new and self.author.role in [User.Role.DOCTOR, User.Role.ADMIN]:
             self.is_staff_reply = True
 
-        # Update ticket's last_reply_at
-        self.ticket.last_reply_at = timezone.now()
-        self.ticket.save(update_fields=['last_reply_at'])
-
         super().save(*args, **kwargs)
+
+        if is_new:
+            update_fields = ['last_reply_at']
+            self.ticket.last_reply_at = timezone.now()
+
+            if self.is_staff_reply and self.ticket.status == Ticket.Status.OPEN:
+                self.ticket.status = Ticket.Status.IN_PROGRESS
+                update_fields.append('status')
+
+            self.ticket.save(update_fields=update_fields)

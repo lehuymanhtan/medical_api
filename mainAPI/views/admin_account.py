@@ -27,7 +27,7 @@ class AdminCreateAccountView(APIView):
         description=(
             'Chỉ Admin mới có thể tạo tài khoản. '
             'Yêu cầu: username, name, cohort, class_name, password. '
-            'Nếu không truyền email, hệ thống sẽ tự tạo email placeholder. '
+            'Nếu không truyền email, hệ thống sẽ để trống email. '
             'Tài khoản sinh viên sẽ được tự động khởi tạo PatientProfile.'
         ),
         request=CreateAccountSerializer,

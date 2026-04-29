@@ -44,7 +44,7 @@ class QueueEntry(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='queue_entries',
-        limit_choices_to={'role': 'STUDENT'}
+        limit_choices_to={'role': User.Role.STUDENT}
     )
     date = models.DateField(default=timezone.now)
     number = models.PositiveIntegerField()

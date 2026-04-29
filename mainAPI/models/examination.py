@@ -20,13 +20,13 @@ class Examination(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='examinations_as_patient',
-        limit_choices_to={'role': 'STUDENT'}
+        limit_choices_to={'role': User.Role.STUDENT}
     )
     doctor = models.ForeignKey(
         User,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name='examinations_as_doctor',
-        limit_choices_to={'role__in': ['DOCTOR', 'ADMIN']}
+        limit_choices_to={'role__in': [User.Role.DOCTOR, User.Role.ADMIN]}
     )
     appointment = models.OneToOneField(
         'Appointment',

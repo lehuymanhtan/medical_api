@@ -52,6 +52,13 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
+TRUSTED_PROXY_IPS = [
+    ip.strip()
+    for ip in config('TRUSTED_PROXY_IPS', default='').split(',')
+    if ip.strip()
+]
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -82,6 +89,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+if DEBUG:
+    INSTALLED_APPS += ['debug_toolbar']
+    MIDDLEWARE = ['debug_toolbar.middleware.DebugToolbarMiddleware'] + MIDDLEWARE
+    INTERNAL_IPS = config('INTERNAL_IPS', default='127.0.0.1').split(',')
 
 ROOT_URLCONF = 'medical_api.urls'
 

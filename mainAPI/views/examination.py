@@ -6,7 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
-from mainAPI.models import Examination, AuditLog
+from mainAPI.models import Examination, AuditLog, User
 from mainAPI.serializers.examination import (
     ExaminationSerializer,
     ExaminationCreateSerializer,
@@ -150,7 +150,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         examination = self.get_object()
         
         # Verify doctor owns this examination
-        if examination.doctor != request.user and request.user.role != 'ADMIN':
+        if examination.doctor != request.user and request.user.role != User.Role.ADMIN:
             return Response(
                 {'error': 'You can only update your own examinations'},
                 status=status.HTTP_403_FORBIDDEN
@@ -213,7 +213,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         examination = self.get_object()
         
         # Verify doctor owns this examination
-        if examination.doctor != request.user and request.user.role != 'ADMIN':
+        if examination.doctor != request.user and request.user.role != User.Role.ADMIN:
             return Response(
                 {'error': 'You can only finalize your own examinations'},
                 status=status.HTTP_403_FORBIDDEN
@@ -236,7 +236,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                 object_id=finalized_examination.id,
                 object_repr=str(finalized_examination),
                 changes={
-                    'status': {'old': old_status, 'new': 'COMPLETED'},
+                    'status': {'old': old_status, 'new': Examination.Status.COMPLETED},
                     'finalized_at': {'old': None, 'new': str(finalized_examination.finalized_at)},
                 },
                 additional_data={

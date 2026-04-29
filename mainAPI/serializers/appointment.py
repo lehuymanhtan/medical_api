@@ -82,11 +82,14 @@ class AppointmentPatchSerializer(serializers.ModelSerializer):
         new_status = attrs.get('status', instance.status)
         
         # Can't modify completed appointments
-        if instance.status == 'COMPLETED':
+        if instance.status == Appointment.Status.COMPLETED:
             raise serializers.ValidationError("Cannot modify completed appointments")
+
+        if instance.status == Appointment.Status.CANCELLED:
+            raise serializers.ValidationError("Cannot modify a cancelled appointment")
         
         # Validate cancellation
-        if new_status == 'CANCELLED' and not attrs.get('cancellation_reason'):
+        if new_status == Appointment.Status.CANCELLED and not attrs.get('cancellation_reason'):
             raise serializers.ValidationError("Cancellation reason is required")
         
         # Validate rescheduling

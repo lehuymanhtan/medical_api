@@ -2,6 +2,7 @@
 Custom permission classes for RBAC (Role-Based Access Control)
 """
 from rest_framework import permissions
+from mainAPI.models import User, Appointment
 
 
 class IsStudent(permissions.BasePermission):
@@ -12,7 +13,7 @@ class IsStudent(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_authenticated and request.user.is_superuser:
             return True
-        return request.user.is_authenticated and request.user.role == 'STUDENT'
+        return request.user.is_authenticated and request.user.role == User.Role.STUDENT
 
 
 class IsDoctor(permissions.BasePermission):
@@ -23,7 +24,7 @@ class IsDoctor(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_authenticated and request.user.is_superuser:
             return True
-        return request.user.is_authenticated and request.user.role in ['DOCTOR', 'ADMIN']
+        return request.user.is_authenticated and request.user.role in [User.Role.DOCTOR, User.Role.ADMIN]
 
 
 class IsAdmin(permissions.BasePermission):
@@ -34,7 +35,7 @@ class IsAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
         if request.user.is_authenticated and request.user.is_superuser:
             return True
-        return request.user.is_authenticated and request.user.role == 'ADMIN'
+        return request.user.is_authenticated and request.user.role == User.Role.ADMIN
 
 
 class IsOwnerOrDoctor(permissions.BasePermission):
@@ -50,7 +51,7 @@ class IsOwnerOrDoctor(permissions.BasePermission):
             return True
         
         # Doctors and admins can access
-        if request.user.role in ['DOCTOR', 'ADMIN']:
+        if request.user.role in [User.Role.DOCTOR, User.Role.ADMIN]:
             return True
         
         # Students can only access their own data
@@ -80,12 +81,12 @@ class CanCancelOwnAppointment(permissions.BasePermission):
             return True
         
         # Doctors and admins have full access
-        if request.user.role in ['DOCTOR', 'ADMIN']:
+        if request.user.role in [User.Role.DOCTOR, User.Role.ADMIN]:
             return True
         
         # Students can only cancel their own pending appointments
-        if request.user.role == 'STUDENT':
-            return obj.patient == request.user and obj.status == 'PENDING'
+        if request.user.role == User.Role.STUDENT:
+            return obj.patient == request.user and obj.status == Appointment.Status.PENDING
         
         return False
 
@@ -104,7 +105,7 @@ class IsTicketParticipant(permissions.BasePermission):
             return True
         
         # Admin can access all tickets
-        if request.user.role == 'ADMIN':
+        if request.user.role == User.Role.ADMIN:
             return True
         
         # Creator can access their own ticket
@@ -116,7 +117,7 @@ class IsTicketParticipant(permissions.BasePermission):
             return True
         
         # Doctors can view all tickets (for assignment)
-        if request.user.role == 'DOCTOR':
+        if request.user.role == User.Role.DOCTOR:
             return True
         
         return False
@@ -139,11 +140,11 @@ class IsDoctorOrOwnerReadOnly(permissions.BasePermission):
             return True
         
         # Doctors and admins have full access
-        if request.user.role in ['DOCTOR', 'ADMIN']:
+        if request.user.role in [User.Role.DOCTOR, User.Role.ADMIN]:
             return True
         
         # Students can only view their own examinations
-        if request.user.role == 'STUDENT':
+        if request.user.role == User.Role.STUDENT:
             # Only allow safe methods (GET, HEAD, OPTIONS)
             if request.method in permissions.READONLY_METHODS:
                 return obj.patient == request.user

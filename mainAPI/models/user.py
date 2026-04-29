@@ -62,7 +62,7 @@ class PatientProfile(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='patient_profile',
-        limit_choices_to={'role': 'STUDENT'}
+        limit_choices_to={'role': User.Role.STUDENT}
     )
 
     blood_type = models.CharField(
@@ -114,7 +114,7 @@ class DoctorProfile(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='doctor_profile',
-        limit_choices_to={'role__in': ['DOCTOR', 'ADMIN']}
+        limit_choices_to={'role__in': [User.Role.DOCTOR, User.Role.ADMIN]}
     )
 
     specialization = models.CharField(max_length=255)

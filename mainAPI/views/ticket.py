@@ -5,9 +5,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
-from django.utils import timezone
+from django.db.models import Prefetch, Q
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
-from mainAPI.models import Ticket, TicketReply, AuditLog
+from mainAPI.models import Ticket, TicketReply, AuditLog, User
 from mainAPI.serializers.ticket import (
     TicketSerializer,
     TicketDetailSerializer,
@@ -49,15 +49,15 @@ class TicketViewSet(viewsets.ModelViewSet):
         """Filter tickets based on user role"""
         user = self.request.user
         
-        if user.role == 'STUDENT':
+        if user.role == User.Role.STUDENT:
             # Students see only their own tickets
             return Ticket.objects.filter(creator=user).select_related('creator', 'assigned_to')
-        elif user.role == 'DOCTOR':
+        elif user.role == User.Role.DOCTOR:
             # Doctors see assigned tickets and all open tickets
-            return (Ticket.objects.filter(
-                assigned_to=user
-            ) | Ticket.objects.filter(status='OPEN')).select_related('creator', 'assigned_to')
-        elif user.role == 'ADMIN':
+            return Ticket.objects.filter(
+                Q(assigned_to=user) | Q(status=Ticket.Status.OPEN)
+            ).select_related('creator', 'assigned_to').distinct()
+        elif user.role == User.Role.ADMIN:
             # Admins see all tickets
             return Ticket.objects.all().select_related('creator', 'assigned_to')
         
@@ -85,7 +85,9 @@ class TicketViewSet(viewsets.ModelViewSet):
         GET /tickets
         List tickets based on user role
         """
-        queryset = self.get_queryset().order_by('-created_at')
+        queryset = self.get_queryset().prefetch_related(
+            Prefetch('replies', queryset=TicketReply.objects.order_by('-created_at'))
+        ).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
@@ -178,7 +180,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         """
         ticket = self.get_object()
         
-        if ticket.status == 'RESOLVED':
+        if ticket.status == Ticket.Status.RESOLVED:
             return Response(
                 {'error': 'Ticket is already closed'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -227,7 +229,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         """
         ticket = self.get_object()
         
-        if ticket.status == 'RESOLVED':
+        if ticket.status == Ticket.Status.RESOLVED:
             return Response(
                 {'error': 'Cannot reply to a closed ticket'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -240,11 +242,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         
         reply = serializer.save()
-        
-        # Update ticket status if staff replies
-        if reply.is_staff_reply and ticket.status == 'OPEN':
-            ticket.status = 'IN_PROGRESS'
-            ticket.save(update_fields=['status'])
         
         return Response(
             {'message': 'Reply added successfully'},

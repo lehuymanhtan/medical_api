@@ -19,7 +19,7 @@ class Appointment(models.Model):
         User,
         on_delete=models.CASCADE,
         related_name='appointments',
-        limit_choices_to={'role': 'STUDENT'}
+        limit_choices_to={'role': User.Role.STUDENT}
     )
 
     appointment_date = models.DateField()

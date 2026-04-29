@@ -17,6 +17,7 @@ class AuditLog(models.Model):
 
         # Appointment actions
         APPOINTMENT_CREATED = 'APPOINTMENT_CREATED', 'Appointment Created'
+        APPOINTMENT_UPDATED = 'APPOINTMENT_UPDATED', 'Appointment Updated'
         APPOINTMENT_CANCELLED = 'APPOINTMENT_CANCELLED', 'Appointment Cancelled'
         APPOINTMENT_COMPLETED = 'APPOINTMENT_COMPLETED', 'Appointment Completed'
 
