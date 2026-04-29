@@ -16,6 +16,7 @@ from mainAPI.serializers.ticket import (
 )
 from mainAPI.permissions import IsStudent, IsTicketParticipant
 from rest_framework.permissions import IsAuthenticated
+from mainAPI.utils.request import get_client_ip
 
 
 @extend_schema_view(
@@ -128,7 +129,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                 additional_data={
                     'subject': ticket.subject,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -150,10 +151,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         Get ticket details with all replies
         """
         ticket = self.get_object()
-        
-        # Update last_reply_at to prevent auto-close
-        ticket.last_reply_at = timezone.now()
-        ticket.save(update_fields=['last_reply_at'])
         
         serializer = TicketDetailSerializer(ticket)
         return Response(serializer.data)
@@ -196,7 +193,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             model_name='Ticket',
             object_id=ticket.id,
             object_repr=str(ticket),
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -253,12 +250,3 @@ class TicketViewSet(viewsets.ModelViewSet):
             {'message': 'Reply added successfully'},
             status=status.HTTP_201_CREATED
         )
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

@@ -14,6 +14,7 @@ from mainAPI.serializers.examination import (
     ExaminationFinalizeSerializer
 )
 from mainAPI.permissions import IsDoctor, IsDoctorOrOwnerReadOnly
+from mainAPI.utils.request import get_client_ip
 
 
 @extend_schema_view(
@@ -113,7 +114,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                     'patient_id': str(examination.patient.id),
                     'appointment_id': str(examination.appointment.id) if examination.appointment else None,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -178,7 +179,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                 'symptoms': {'old': old_data['symptoms'], 'new': updated_examination.symptoms},
                 'initial_diagnosis': {'old': old_data['initial_diagnosis'], 'new': updated_examination.initial_diagnosis},
             },
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -242,7 +243,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                     'final_diagnosis': finalized_examination.final_diagnosis,
                     'prescription': finalized_examination.prescription,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -250,12 +251,3 @@ class ExaminationViewSet(viewsets.ModelViewSet):
             ExaminationSerializer(finalized_examination).data,
             status=status.HTTP_200_OK
         )
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

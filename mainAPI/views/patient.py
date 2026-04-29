@@ -11,6 +11,7 @@ from mainAPI.models import User, Examination, AuditLog
 from mainAPI.serializers.user import PatientSummarySerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
 from mainAPI.permissions import IsDoctor
+from mainAPI.utils.request import get_client_ip
 
 
 class PatientViewSet(viewsets.GenericViewSet):
@@ -63,7 +64,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             object_id=patient.id,
             object_repr=str(patient),
             additional_data={'patient_id': str(patient.id)},
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -103,7 +104,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             object_id=patient.id,
             object_repr=str(patient),
             additional_data={'patient_id': str(patient.id)},
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -114,12 +115,3 @@ class PatientViewSet(viewsets.GenericViewSet):
         
         serializer = ExaminationSummarySerializer(examinations, many=True)
         return Response(serializer.data)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

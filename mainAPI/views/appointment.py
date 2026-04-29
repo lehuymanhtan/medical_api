@@ -15,6 +15,7 @@ from mainAPI.serializers.appointment import (
 )
 from mainAPI.permissions import IsStudent, CanCancelOwnAppointment
 from rest_framework.permissions import IsAuthenticated
+from mainAPI.utils.request import get_client_ip
 
 
 @extend_schema_view(
@@ -151,7 +152,7 @@ Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.''',
                     'appointment_date': str(appointment.appointment_date),
                     'reason': appointment.reason,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
             
@@ -229,17 +230,8 @@ Mỗi sinh viên chỉ được đặt một lịch hẹn mỗi ngày.''',
             additional_data={
                 'cancellation_reason': updated_appointment.cancellation_reason,
             } if updated_appointment.status == 'CANCELLED' else {},
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
         return Response(AppointmentSerializer(updated_appointment).data)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

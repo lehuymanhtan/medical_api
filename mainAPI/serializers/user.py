@@ -62,7 +62,7 @@ class PatientSummarySerializer(serializers.ModelSerializer):
     last_visit_date = serializers.SerializerMethodField()
     
     age = serializers.SerializerMethodField()
-    date_of_birth = serializers.DateField(source='patient_profile.date_of_birth', read_only=True)
+    date_of_birth = serializers.DateField(read_only=True)
     height = serializers.DecimalField(source='patient_profile.height', max_digits=5, decimal_places=2, read_only=True)
     weight = serializers.DecimalField(source='patient_profile.weight', max_digits=5, decimal_places=2, read_only=True)
     fasting_blood_sugar = serializers.DecimalField(source='patient_profile.fasting_blood_sugar', max_digits=5, decimal_places=2, read_only=True)
@@ -122,23 +122,27 @@ class PatientSummarySerializer(serializers.ModelSerializer):
     
     def get_age(self, obj) -> int:
         from datetime import date
-        if hasattr(obj, 'patient_profile') and obj.patient_profile.date_of_birth:
-            dob = obj.patient_profile.date_of_birth
+        if obj.date_of_birth:
+            dob = obj.date_of_birth
             today = date.today()
             return today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         return None
     
     def get_allergies(self, obj) -> list:
-        """Parse comma-separated allergies into list"""
         if hasattr(obj, 'patient_profile') and obj.patient_profile.allergies:
-            return [a.strip() for a in obj.patient_profile.allergies.split(',') if a.strip()]
+            return obj.patient_profile.allergies
         return []
     
+    def _get_last_exam(self, obj):
+        if not hasattr(obj, '_last_exam_cached'):
+            obj._last_exam_cached = obj.examinations_as_patient.filter(
+                status='COMPLETED'
+            ).order_by('-examination_date').first()
+        return obj._last_exam_cached
+
     def get_last_diagnosis(self, obj) -> str:
         """Get the most recent diagnosis"""
-        last_exam = obj.examinations_as_patient.filter(
-            status='COMPLETED'
-        ).order_by('-examination_date').first()
+        last_exam = self._get_last_exam(obj)
         
         if last_exam:
             return last_exam.final_diagnosis[:100]  # Truncate to 100 chars
@@ -146,9 +150,7 @@ class PatientSummarySerializer(serializers.ModelSerializer):
     
     def get_last_visit_date(self, obj) -> str:
         """Get the date of last examination"""
-        last_exam = obj.examinations_as_patient.filter(
-            status='COMPLETED'
-        ).order_by('-examination_date').first()
+        last_exam = self._get_last_exam(obj)
         
         if last_exam:
             return last_exam.examination_date.date()
@@ -229,8 +231,6 @@ class BatchCreateAccountSerializer(serializers.Serializer):
     def create(self, validated_data):
         created_users = []
         for account_data in validated_data['accounts']:
-            serializer = CreateAccountSerializer(data=account_data)
-            # Already validated; call create directly
             user = CreateAccountSerializer().create(account_data)
             created_users.append(user)
         return created_users

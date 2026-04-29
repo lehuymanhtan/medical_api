@@ -138,7 +138,7 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         
         # Extract and update new fields
         ALLOWED_FIELDS = [
-            'date_of_birth', 'height', 'weight', 'fasting_blood_sugar', 'hba1c', 
+            'height', 'weight', 'fasting_blood_sugar', 'hba1c', 
             'red_blood_cells', 'hemoglobin', 'hematocrit', 'white_blood_cells', 
             'platelets', 'creatinine', 'blood_urea_nitrogen', 'ast_sgot', 
             'alt_sgpt', 'total_bilirubin', 'total_cholesterol', 'ldl_cholesterol', 
@@ -167,9 +167,9 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         # Update allergies if provided
         if allergies is not None:
             if isinstance(allergies, list):
-                patient_profile.allergies = ", ".join([str(a).strip() for a in allergies if str(a).strip()])
+                patient_profile.allergies = [str(a).strip() for a in allergies if str(a).strip()]
             else:
-                patient_profile.allergies = str(allergies)
+                patient_profile.allergies = [str(allergies)]
         
         patient_profile.save()
         

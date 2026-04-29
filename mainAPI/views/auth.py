@@ -16,6 +16,7 @@ from mainAPI.serializers.user import (
     ChangePasswordRequestSerializer
 )
 from mainAPI.models import AuditLog
+from mainAPI.utils.request import get_client_ip
 
 
 class LoginView(APIView):
@@ -95,7 +96,7 @@ class LoginView(APIView):
             model_name='User',
             object_id=user.id,
             object_repr=str(user),
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -107,15 +108,6 @@ class LoginView(APIView):
             'refresh': str(refresh),
             'user': user_serializer.data
         }, status=status.HTTP_200_OK)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
 
 
 class RefreshTokenView(APIView):
@@ -243,11 +235,11 @@ class ChangePasswordView(APIView):
             # Create audit log
             AuditLog.objects.create(
                 user=user,
-                action='USER_CHANGE_PASSWORD',  # Using string since we didn't add it to Action choices, or we can just use generic if Action is restricted. Wait, Action choices in Audit log are restricted.
+                action=AuditLog.Action.USER_CHANGE_PASSWORD,
                 model_name='User',
                 object_id=user.id,
                 object_repr=str(user),
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
             
@@ -257,13 +249,4 @@ class ChangePasswordView(APIView):
             )
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
 

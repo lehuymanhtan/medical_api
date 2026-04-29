@@ -71,13 +71,13 @@ class PatientProfile(models.Model):
         choices=BLOOD_TYPE_CHOICES, 
         blank=True
     )
-    allergies = models.TextField(
+    allergies = models.JSONField(
+        default=list, 
         blank=True, 
-        help_text="Comma-separated list of allergies"
+        help_text="List of allergies"
     )
     chronic_conditions = models.TextField(blank=True)
     
-    date_of_birth = models.DateField(null=True, blank=True)
     height = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
     weight = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, validators=[MinValueValidator(0)])
     fasting_blood_sugar = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)

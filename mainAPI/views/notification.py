@@ -1,15 +1,15 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, mixins
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema
 from mainAPI.models import FCMDeviceToken
 from mainAPI.serializers.notification import FCMDeviceTokenSerializer
 
-class FCMDeviceTokenViewSet(viewsets.ModelViewSet):
+class FCMDeviceTokenViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet):
     """
-    Endpoint for users to register their FCM device tokens
+    Endpoint for users to register or delete their FCM device tokens
     """
-    http_method_names = ['post']
+    http_method_names = ['post', 'delete']
     serializer_class = FCMDeviceTokenSerializer
     permission_classes = [IsAuthenticated]
     

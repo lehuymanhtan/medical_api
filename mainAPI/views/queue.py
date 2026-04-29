@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
 from django.db.models import Max
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from mainAPI.models import QueueEntry
@@ -113,17 +113,22 @@ class QueueEntryViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        with transaction.atomic():
-            max_number_entry = QueueEntry.objects.filter(date=today).aggregate(Max('number'))
-            max_number = max_number_entry['number__max'] or 0
-            new_number = max_number + 1
-            
-            queue_entry = QueueEntry.objects.create(
-                patient=user,
-                date=today,
-                number=new_number,
-                status=QueueEntry.Status.WAITING
-            )
+        while True:
+            try:
+                with transaction.atomic():
+                    max_number_entry = QueueEntry.objects.filter(date=today).aggregate(Max('number'))
+                    max_number = max_number_entry['number__max'] or 0
+                    new_number = max_number + 1
+                    
+                    queue_entry = QueueEntry.objects.create(
+                        patient=user,
+                        date=today,
+                        number=new_number,
+                        status=QueueEntry.Status.WAITING
+                    )
+                break
+            except IntegrityError:
+                continue
         
         return Response(QueueEntrySerializer(queue_entry).data, status=status.HTTP_201_CREATED)
 
