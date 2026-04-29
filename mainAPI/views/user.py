@@ -107,9 +107,10 @@ class UserProfileViewSet(viewsets.GenericViewSet):
                         'description': 'Nhóm máu'
                     },
                     'allergies': {
-                        'type': 'string',
+                        'type': 'array',
+                        'items': {'type': 'string'},
                         'nullable': True,
-                        'description': 'Danh sách dị ứng (phân cách bằng dấu phẩy)'
+                        'description': 'Danh sách dị ứng'
                     }
                 }
             }
@@ -165,7 +166,10 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         
         # Update allergies if provided
         if allergies is not None:
-            patient_profile.allergies = allergies
+            if isinstance(allergies, list):
+                patient_profile.allergies = ", ".join([str(a).strip() for a in allergies if str(a).strip()])
+            else:
+                patient_profile.allergies = str(allergies)
         
         patient_profile.save()
         
