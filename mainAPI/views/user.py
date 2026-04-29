@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from mainAPI.models import User, Examination, PatientProfile
-from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer
+from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer, MedicalSummaryUpdateSerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
 from mainAPI.permissions import IsStudent
 
@@ -132,53 +132,10 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         # Get or create patient profile
         patient_profile, created = PatientProfile.objects.get_or_create(user=user)
         
-        # Extract allowed fields
-        blood_type = request.data.get('blood_type')
-        allergies = request.data.get('allergies')
-        
-        # Extract and update new fields
-        ALLOWED_FIELDS = [
-            'height', 'weight', 'fasting_blood_sugar', 'hba1c', 
-            'red_blood_cells', 'hemoglobin', 'hematocrit', 'white_blood_cells', 
-            'platelets', 'creatinine', 'blood_urea_nitrogen', 'ast_sgot', 
-            'alt_sgpt', 'total_bilirubin', 'total_cholesterol', 'ldl_cholesterol', 
-            'hdl_cholesterol', 'triglycerides', 'sodium', 'potassium', 'calcium'
-        ]
-        
-        for field in ALLOWED_FIELDS:
-            if field in request.data:
-                val = request.data.get(field)
-                if val == "":
-                    val = None
-                elif val is not None:
-                    # Validate numeric
-                    try:
-                        val = float(val)
-                    except ValueError:
-                        return Response({'error': f'Invalid numeric value for {field}'}, status=status.HTTP_400_BAD_REQUEST)
-                setattr(patient_profile, field, val)
-        
-        # Update blood_type if provided
-        if blood_type is not None:
-            if blood_type == '':
-                patient_profile.blood_type = ''
-            elif blood_type in dict(PatientProfile.BLOOD_TYPE_CHOICES):
-                patient_profile.blood_type = blood_type
-            else:
-                return Response(
-                    {'error': 'Invalid blood type'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-        # Update allergies if provided
-        if allergies is not None:
-            if isinstance(allergies, list):
-                patient_profile.allergies = [str(a).strip() for a in allergies if str(a).strip()]
-            else:
-                patient_profile.allergies = [str(allergies)]
-        
-        patient_profile.save()
-        
-        # Return updated summary
-        serializer = PatientSummarySerializer(user)
-        return Response(serializer.data)
+        serializer = MedicalSummaryUpdateSerializer(patient_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated summary
+            summary_serializer = PatientSummarySerializer(user)
+            return Response(summary_serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

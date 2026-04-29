@@ -157,6 +157,36 @@ class PatientSummarySerializer(serializers.ModelSerializer):
         return None
 
 
+class MedicalSummaryUpdateSerializer(serializers.ModelSerializer):
+    """
+    Serializer for updating a patient's medical summary fields.
+    """
+    class Meta:
+        model = PatientProfile
+        fields = [
+            'blood_type', 'allergies', 'height', 'weight', 'fasting_blood_sugar', 'hba1c', 
+            'red_blood_cells', 'hemoglobin', 'hematocrit', 'white_blood_cells', 
+            'platelets', 'creatinine', 'blood_urea_nitrogen', 'ast_sgot', 
+            'alt_sgpt', 'total_bilirubin', 'total_cholesterol', 'ldl_cholesterol', 
+            'hdl_cholesterol', 'triglycerides', 'sodium', 'potassium', 'calcium'
+        ]
+
+    def validate_allergies(self, value):
+        if value is None:
+            return value
+        if isinstance(value, list):
+            return [str(a).strip() for a in value if str(a).strip()]
+        return [str(value)]
+
+    def to_internal_value(self, data):
+        # Convert empty strings to None for Decimal/Numeric fields
+        mutable_data = data.copy() if hasattr(data, 'copy') else data
+        for key, value in mutable_data.items():
+            if value == "" and key != 'blood_type':
+                mutable_data[key] = None
+        return super().to_internal_value(mutable_data)
+
+
 class CreateAccountSerializer(serializers.Serializer):
     """
     Serializer for admin to create a new user account.

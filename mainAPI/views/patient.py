@@ -19,6 +19,7 @@ class PatientViewSet(viewsets.GenericViewSet):
     Patient lookup and history views for doctors
     """
     permission_classes = [IsDoctor]
+    queryset = User.objects.filter(role='STUDENT').select_related('patient_profile')
     
     @extend_schema(
         tags=['Doctor Workflow'],
@@ -54,7 +55,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             )
         
         # Look up patient by UUID (QR code contains user ID)
-        patient = get_object_or_404(User, id=qr_code, role='STUDENT')
+        patient = get_object_or_404(self.get_queryset(), id=qr_code)
         
         # Create audit log for QR scan
         AuditLog.objects.create(
@@ -94,7 +95,7 @@ class PatientViewSet(viewsets.GenericViewSet):
         GET /patients/{id}/examinations
         Get full examination history for a patient
         """
-        patient = get_object_or_404(User, id=pk, role='STUDENT')
+        patient = get_object_or_404(self.get_queryset(), id=pk)
         
         # Create audit log for history access
         AuditLog.objects.create(
