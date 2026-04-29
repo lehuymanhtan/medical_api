@@ -54,9 +54,9 @@ class TicketViewSet(viewsets.ModelViewSet):
             return Ticket.objects.filter(creator=user).select_related('creator', 'assigned_to')
         elif user.role == 'DOCTOR':
             # Doctors see assigned tickets and all open tickets
-            return Ticket.objects.filter(
+            return (Ticket.objects.filter(
                 assigned_to=user
-            ) | Ticket.objects.filter(status='OPEN')
+            ) | Ticket.objects.filter(status='OPEN')).select_related('creator', 'assigned_to')
         elif user.role == 'ADMIN':
             # Admins see all tickets
             return Ticket.objects.all().select_related('creator', 'assigned_to')

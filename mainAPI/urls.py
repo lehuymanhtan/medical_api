@@ -7,6 +7,7 @@ from mainAPI.views import (
     LoginView,
     RefreshTokenView,
     ChangePasswordView,
+    LogoutView,
     UserProfileViewSet,
     PatientViewSet,
     AppointmentViewSet,
@@ -35,6 +36,7 @@ urlpatterns = [
     path('auth/login', LoginView.as_view(), name='login'),
     path('auth/refresh', RefreshTokenView.as_view(), name='refresh-token'),
     path('auth/change-password', ChangePasswordView.as_view(), name='change-password'),
+    path('auth/logout', LogoutView.as_view(), name='logout'),
     
     # User profile and dashboard
     path('users/', include([

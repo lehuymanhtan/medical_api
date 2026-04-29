@@ -150,6 +150,12 @@ class UserProfileViewSet(viewsets.GenericViewSet):
                 val = request.data.get(field)
                 if val == "":
                     val = None
+                elif val is not None:
+                    # Validate numeric
+                    try:
+                        val = float(val)
+                    except ValueError:
+                        return Response({'error': f'Invalid numeric value for {field}'}, status=status.HTTP_400_BAD_REQUEST)
                 setattr(patient_profile, field, val)
         
         # Update blood_type if provided

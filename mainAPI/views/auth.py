@@ -250,3 +250,55 @@ class ChangePasswordView(APIView):
             
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+class LogoutView(APIView):
+    """
+    Logout user endpoint
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='logout',
+        summary='Đăng xuất khỏi hệ thống',
+        description='Đưa refresh token vào blacklist để thu hồi quyền truy cập.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'refresh': {
+                        'type': 'string',
+                        'description': 'Refresh token cần thu hồi'
+                    }
+                },
+                'required': ['refresh']
+            }
+        },
+        responses={
+            200: {'description': 'Đăng xuất thành công'},
+            400: {'description': 'Thiếu hoặc sai refresh token'}
+        }
+    )
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            if not refresh_token:
+                return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action=AuditLog.Action.USER_LOGOUT,
+                model_name='User',
+                object_id=request.user.id,
+                object_repr=str(request.user),
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            )
+            
+            return Response({'message': 'Đăng xuất thành công'}, status=status.HTTP_200_OK)
+        except TokenError:
+            return Response({'error': 'Invalid or expired refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+
