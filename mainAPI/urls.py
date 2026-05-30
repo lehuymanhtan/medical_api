@@ -16,6 +16,8 @@ from mainAPI.views import (
     ImageUploadView,
     AdminCreateAccountView,
     AdminBatchCreateAccountView,
+    ForgotPasswordView,
+    ResetPasswordView,
 )
 from mainAPI.views.queue import QueueEntryViewSet
 from mainAPI.views.notification import FCMDeviceTokenViewSet
@@ -41,6 +43,8 @@ urlpatterns = [
     path('auth/refresh', RefreshTokenView.as_view(), name='refresh-token'),
     path('auth/change-password', ChangePasswordView.as_view(), name='change-password'),
     path('auth/logout', LogoutView.as_view(), name='logout'),
+    path('auth/forgot-password', ForgotPasswordView.as_view(), name='forgot-password'),
+    path('auth/reset-password', ResetPasswordView.as_view(), name='reset-password'),
     
     # User profile and dashboard
     path('users/', include([

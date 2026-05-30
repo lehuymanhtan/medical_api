@@ -27,3 +27,11 @@ class FCMDeviceTokenViewSet(mixins.CreateModelMixin, mixins.DestroyModelMixin, v
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+    @extend_schema(
+        tags=['Notifications'],
+        summary='Hủy đăng ký Token nhận thông báo',
+        description='Xóa token Firebase Cloud Messaging của thiết bị để ngừng nhận push notification.'
+    )
+    def destroy(self, request, *args, **kwargs):
+        return super().destroy(request, *args, **kwargs)

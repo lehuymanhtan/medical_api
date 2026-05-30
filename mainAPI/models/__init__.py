@@ -1,4 +1,5 @@
 from .user import User, PatientProfile, DoctorProfile
+from .password_reset import PasswordResetToken
 from .appointment import Appointment
 from .examination import Examination
 from .prescription import Prescription
@@ -20,4 +21,5 @@ __all__ = [
     "AuditLog",
     "FCMDeviceToken",
     "QueueEntry",
+    "PasswordResetToken",
 ]

@@ -45,3 +45,6 @@ sentry-sdk
 
 # Firebase Cloud Messaging
 firebase-admin
+
+# Transactional email (password reset)
+resend

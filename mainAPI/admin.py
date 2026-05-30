@@ -2,7 +2,8 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, PatientProfile, DoctorProfile, Appointment, 
-    Examination, Prescription, Ticket, TicketReply, UploadedFile, AuditLog
+    Examination, Prescription, Ticket, TicketReply, UploadedFile, AuditLog,
+    PasswordResetToken
 )
 
 
@@ -187,3 +188,14 @@ class PrescriptionAdmin(admin.ModelAdmin):
     list_display = ['name', 'examination', 'morning', 'evening', 'before_meal', 'quantity']
     list_filter = ['morning', 'evening', 'before_meal']
     search_fields = ['name', 'examination__patient__full_name']
+
+
+@admin.register(PasswordResetToken)
+class PasswordResetTokenAdmin(admin.ModelAdmin):
+    list_display = ['user', 'created_at', 'expires_at', 'is_used']
+    list_filter = ['is_used', 'created_at']
+    search_fields = ['user__full_name', 'user__email']
+    readonly_fields = ['id', 'user', 'token', 'created_at', 'expires_at']
+
+    def has_add_permission(self, request):
+        return False
