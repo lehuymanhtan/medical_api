@@ -43,7 +43,6 @@ class Examination(models.Model):
 
     # Final diagnosis (locked after finalize)
     final_diagnosis = models.TextField(blank=True)
-    prescription = models.TextField(blank=True)
 
     # Vital signs
     blood_pressure = models.CharField(max_length=20, blank=True)

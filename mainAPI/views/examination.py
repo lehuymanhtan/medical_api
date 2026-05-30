@@ -41,7 +41,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
     - Doctors: Full CRUD access
     - Students: Read-only access to their own examinations
     """
-    queryset = Examination.objects.all().select_related('patient', 'doctor', 'appointment')
+    queryset = Examination.objects.all().select_related('patient', 'doctor', 'appointment').prefetch_related('medicines')
     
     def get_permissions(self):
         """

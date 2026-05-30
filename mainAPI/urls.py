@@ -19,6 +19,10 @@ from mainAPI.views import (
 )
 from mainAPI.views.queue import QueueEntryViewSet
 from mainAPI.views.notification import FCMDeviceTokenViewSet
+from mainAPI.views.prescription import PrescriptionViewSet
+
+prescription_list = PrescriptionViewSet.as_view({'get': 'list', 'post': 'create'})
+prescription_detail = PrescriptionViewSet.as_view({'get': 'retrieve', 'patch': 'partial_update', 'delete': 'destroy'})
 
 # Create router for viewsets
 router = DefaultRouter()
@@ -60,6 +64,10 @@ urlpatterns = [
     # Admin account management
     path('admin/accounts/create', AdminCreateAccountView.as_view(), name='admin-create-account'),
     path('admin/accounts/batch-create', AdminBatchCreateAccountView.as_view(), name='admin-batch-create-account'),
+    
+    # Nested routes for medicines
+    path('examinations/<uuid:examination_id>/medicines/', prescription_list, name='examination-medicines-list'),
+    path('examinations/<uuid:examination_id>/medicines/<uuid:pk>/', prescription_detail, name='examination-medicines-detail'),
     
     # Router URLs (appointments, examinations, tickets)
     path('', include(router.urls)),

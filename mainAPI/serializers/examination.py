@@ -2,7 +2,30 @@
 Examination Serializers
 """
 from rest_framework import serializers
-from mainAPI.models import Examination, Appointment, User
+from mainAPI.models import Examination, Appointment, User, Prescription
+
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    """Read serializer — used for nested display in ExaminationSerializer"""
+    class Meta:
+        model = Prescription
+        fields = ['id', 'name', 'morning', 'evening', 'before_meal', 'quantity', 'summary']
+        read_only_fields = ['id']
+
+
+class PrescriptionCreateSerializer(serializers.ModelSerializer):
+    """Write serializer — used by PrescriptionViewSet to create/update prescriptions"""
+    class Meta:
+        model = Prescription
+        fields = ['name', 'morning', 'evening', 'before_meal', 'quantity', 'summary']
+        extra_kwargs = {
+            'name':        {'help_text': 'Medicine name.'},
+            'morning':     {'help_text': 'Take in the morning.'},
+            'evening':     {'help_text': 'Take in the evening.'},
+            'before_meal': {'help_text': 'Take before meals.'},
+            'quantity':    {'help_text': 'Total units dispensed.'},
+            'summary':     {'help_text': 'Additional instructions.'},
+        }
 
 
 class ExaminationSummarySerializer(serializers.ModelSerializer):
@@ -38,6 +61,7 @@ class ExaminationSerializer(serializers.ModelSerializer):
     """
     patient_name = serializers.CharField(source='patient.full_name', read_only=True)
     doctor_name = serializers.CharField(source='doctor.full_name', read_only=True)
+    medicines = PrescriptionSerializer(many=True, read_only=True)
     
     class Meta:
         model = Examination
@@ -52,7 +76,6 @@ class ExaminationSerializer(serializers.ModelSerializer):
             'initial_diagnosis',
             'notes',
             'final_diagnosis',
-            'prescription',
             'blood_pressure',
             'heart_rate',
             'temperature',
@@ -61,6 +84,7 @@ class ExaminationSerializer(serializers.ModelSerializer):
             'finalized_at',
             'created_at',
             'updated_at',
+            'medicines',
         ]
         read_only_fields = [
             'id',
@@ -185,12 +209,10 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
         model = Examination
         fields = [
             'final_diagnosis',
-            'prescription',
             'notes',
         ]
         extra_kwargs = {
             'final_diagnosis': {'help_text': 'Conclusive diagnosis (required for finalization).'},
-            'prescription': {'help_text': 'Medicines and dosage instructions (required for finalization).'},
             'notes': {'help_text': 'Final notes or follow-up instructions.'},
         }
     
@@ -198,9 +220,6 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
         """Ensure required fields are present"""
         if not attrs.get('final_diagnosis'):
             raise serializers.ValidationError("Final diagnosis is required for finalization")
-        
-        if not attrs.get('prescription'):
-            raise serializers.ValidationError("Prescription is required for finalization")
         
         if self.instance.status == Examination.Status.COMPLETED:
             raise serializers.ValidationError("Examination is already finalized")

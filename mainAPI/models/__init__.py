@@ -1,6 +1,7 @@
 from .user import User, PatientProfile, DoctorProfile
 from .appointment import Appointment
 from .examination import Examination
+from .prescription import Prescription
 from .ticket import Ticket, TicketReply
 from .files import UploadedFile
 from .audit import AuditLog
@@ -12,6 +13,7 @@ __all__ = [
     "DoctorProfile",
     "Appointment",
     "Examination",
+    "Prescription",
     "Ticket",
     "TicketReply",
     "UploadedFile",

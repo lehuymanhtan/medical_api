@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from .models import (
     User, PatientProfile, DoctorProfile, Appointment, 
-    Examination, Ticket, TicketReply, UploadedFile, AuditLog
+    Examination, Prescription, Ticket, TicketReply, UploadedFile, AuditLog
 )
 
 
@@ -77,7 +77,7 @@ class ExaminationAdmin(admin.ModelAdmin):
     fieldsets = (
         ('Examination Info', {'fields': ('patient', 'doctor', 'appointment', 'status')}),
         ('Clinical Data', {'fields': ('symptoms', 'initial_diagnosis', 'notes')}),
-        ('Final Diagnosis', {'fields': ('final_diagnosis', 'prescription')}),
+        ('Final Diagnosis', {'fields': ('final_diagnosis',)}),
         ('Vital Signs', {'fields': ('blood_pressure', 'heart_rate', 'temperature')}),
         ('Timestamps', {'fields': ('examination_date', 'finalized_at', 'created_at', 'updated_at')}),
     )
@@ -148,3 +148,9 @@ class AuditLogAdmin(admin.ModelAdmin):
     
     def has_delete_permission(self, request, obj=None):
         return False
+
+@admin.register(Prescription)
+class PrescriptionAdmin(admin.ModelAdmin):
+    list_display = ['name', 'examination', 'morning', 'evening', 'before_meal', 'quantity']
+    list_filter = ['morning', 'evening', 'before_meal']
+    search_fields = ['name', 'examination__patient__full_name']
