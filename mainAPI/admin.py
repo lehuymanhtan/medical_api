@@ -14,13 +14,13 @@ class UserAdmin(BaseUserAdmin):
     ordering = ['-created_at']
     
     fieldsets = (
-        (None, {'fields': ('username', 'password')}),
-        ('Personal Info', {'fields': ('full_name', 'email', 'phone_number', 'student_id', 'cohort', 'class_name', 'sex', 'date_of_birth', 'address')}),
+        (None, {'fields': ('id', 'username', 'password')}),
+        ('Personal Info', {'fields': ('first_name', 'last_name', 'full_name', 'email', 'phone_number', 'student_id', 'cohort', 'class_name', 'sex', 'date_of_birth', 'address')}),
         ('Role', {'fields': ('role',)}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined', 'created_at', 'updated_at')}),
     )
-    readonly_fields = ['created_at', 'updated_at', 'date_joined', 'last_login']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'date_joined', 'last_login']
 
 
 @admin.register(PatientProfile)
@@ -28,11 +28,14 @@ class PatientProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'blood_type', 'created_at']
     list_filter = ['blood_type', 'created_at']
     search_fields = ['user__full_name', 'user__email']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Patient', {'fields': ('user',)}),
         ('Medical Information', {'fields': ('blood_type', 'allergies', 'chronic_conditions')}),
+        ('Vitals', {'fields': ('height', 'weight')}),
+        ('Lab Results', {'fields': ('fasting_blood_sugar', 'hba1c', 'red_blood_cells', 'hemoglobin', 'hematocrit', 'white_blood_cells', 'platelets', 'creatinine', 'blood_urea_nitrogen', 'ast_sgot', 'alt_sgpt', 'total_bilirubin', 'total_cholesterol', 'ldl_cholesterol', 'hdl_cholesterol', 'triglycerides', 'sodium', 'potassium', 'calcium')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
     )
 
@@ -42,9 +45,10 @@ class DoctorProfileAdmin(admin.ModelAdmin):
     list_display = ['user', 'specialization', 'department', 'created_at']
     list_filter = ['specialization', 'department', 'created_at']
     search_fields = ['user__full_name', 'specialization', 'department']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Doctor', {'fields': ('user',)}),
         ('Professional Information', {'fields': ('specialization', 'department', 'bio')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
@@ -54,12 +58,19 @@ class DoctorProfileAdmin(admin.ModelAdmin):
 @admin.register(Appointment)
 class AppointmentAdmin(admin.ModelAdmin):
     list_display = ['patient', 'appointment_date', 'status', 'created_at']
-    list_filter = ['status', 'appointment_date', 'created_at']
+    list_filter = [
+        'status',
+        ('patient', admin.RelatedOnlyFieldListFilter),
+        ('cancelled_by', admin.RelatedOnlyFieldListFilter),
+        'appointment_date',
+        'created_at',
+    ]
     search_fields = ['patient__full_name', 'patient__email', 'reason']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     date_hierarchy = 'appointment_date'
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Appointment Details', {'fields': ('patient', 'appointment_date', 'status', 'reason')}),
         ('Cancellation', {'fields': ('cancelled_by', 'cancellation_reason')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
@@ -69,12 +80,19 @@ class AppointmentAdmin(admin.ModelAdmin):
 @admin.register(Examination)
 class ExaminationAdmin(admin.ModelAdmin):
     list_display = ['patient', 'doctor', 'status', 'examination_date', 'finalized_at']
-    list_filter = ['status', 'examination_date', 'finalized_at']
+    list_filter = [
+        'status',
+        ('patient', admin.RelatedOnlyFieldListFilter),
+        ('doctor', admin.RelatedOnlyFieldListFilter),
+        'examination_date',
+        'finalized_at',
+    ]
     search_fields = ['patient__full_name', 'doctor__full_name', 'symptoms', 'final_diagnosis']
-    readonly_fields = ['examination_date', 'finalized_at', 'created_at', 'updated_at']
+    readonly_fields = ['id', 'examination_date', 'finalized_at', 'created_at', 'updated_at']
     date_hierarchy = 'examination_date'
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Examination Info', {'fields': ('patient', 'doctor', 'appointment', 'status')}),
         ('Clinical Data', {'fields': ('symptoms', 'initial_diagnosis', 'notes')}),
         ('Final Diagnosis', {'fields': ('final_diagnosis',)}),
@@ -86,12 +104,19 @@ class ExaminationAdmin(admin.ModelAdmin):
 @admin.register(Ticket)
 class TicketAdmin(admin.ModelAdmin):
     list_display = ['subject', 'creator', 'assigned_to', 'status', 'created_at', 'resolved_at']
-    list_filter = ['status', 'created_at', 'resolved_at']
+    list_filter = [
+        'status',
+        ('creator', admin.RelatedOnlyFieldListFilter),
+        ('assigned_to', admin.RelatedOnlyFieldListFilter),
+        'created_at',
+        'resolved_at',
+    ]
     search_fields = ['subject', 'creator__full_name', 'assigned_to__full_name']
-    readonly_fields = ['created_at', 'updated_at', 'resolved_at', 'last_reply_at']
+    readonly_fields = ['id', 'created_at', 'updated_at', 'resolved_at', 'last_reply_at']
     date_hierarchy = 'created_at'
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Ticket Details', {'fields': ('subject', 'status', 'creator', 'assigned_to')}),
         ('Related', {'fields': ('related_appointment',)}),
         ('Timestamps', {'fields': ('created_at', 'updated_at', 'last_reply_at', 'resolved_at')}),
@@ -101,11 +126,17 @@ class TicketAdmin(admin.ModelAdmin):
 @admin.register(TicketReply)
 class TicketReplyAdmin(admin.ModelAdmin):
     list_display = ['ticket', 'author', 'is_staff_reply', 'created_at']
-    list_filter = ['is_staff_reply', 'created_at']
+    list_filter = [
+        ('ticket', admin.RelatedOnlyFieldListFilter),
+        ('author', admin.RelatedOnlyFieldListFilter),
+        'is_staff_reply',
+        'created_at',
+    ]
     search_fields = ['ticket__subject', 'author__full_name', 'content']
-    readonly_fields = ['created_at', 'updated_at']
+    readonly_fields = ['id', 'created_at', 'updated_at']
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Reply Info', {'fields': ('ticket', 'author', 'is_staff_reply')}),
         ('Content', {'fields': ('content', 'attachment_url')}),
         ('Timestamps', {'fields': ('created_at', 'updated_at')}),
@@ -117,9 +148,10 @@ class UploadedFileAdmin(admin.ModelAdmin):
     list_display = ['file_name', 'uploaded_by', 'mime_type', 'file_size', 'created_at']
     list_filter = ['mime_type', 'created_at']
     search_fields = ['file_name', 'uploaded_by__full_name']
-    readonly_fields = ['created_at']
+    readonly_fields = ['id', 'created_at']
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('File Info', {'fields': ('file', 'file_name', 'file_size', 'mime_type', 'url')}),
         ('Uploaded By', {'fields': ('uploaded_by',)}),
         ('Associations', {'fields': ('examination', 'ticket_reply')}),
@@ -133,10 +165,11 @@ class AuditLogAdmin(admin.ModelAdmin):
     list_filter = ['action', 'model_name', 'timestamp']
     search_fields = ['user__full_name', 'object_repr', 'ip_address']
     readonly_fields = ['user', 'action', 'model_name', 'object_id', 'object_repr', 
-                       'changes', 'additional_data', 'ip_address', 'user_agent', 'timestamp']
+                       'changes', 'additional_data', 'ip_address', 'user_agent', 'timestamp', 'id']
     date_hierarchy = 'timestamp'
     
     fieldsets = (
+        ('Identifiers', {'fields': ('id',)}),
         ('Action', {'fields': ('action', 'user', 'timestamp')}),
         ('Target Object', {'fields': ('model_name', 'object_id', 'object_repr')}),
         ('Details', {'fields': ('changes', 'additional_data')}),
