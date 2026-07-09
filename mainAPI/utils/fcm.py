@@ -13,13 +13,22 @@ def initialize_firebase():
     """
     if not firebase_admin._apps:
         try:
+            cred_base64 = getattr(settings, 'FIREBASE_CREDENTIALS_BASE64', '')
             cred_path = getattr(settings, 'FIREBASE_CREDENTIALS_PATH', None)
-            if cred_path and os.path.exists(cred_path):
+            
+            if cred_base64:
+                import base64
+                import json
+                cred_dict = json.loads(base64.b64decode(cred_base64).decode('utf-8'))
+                cred = credentials.Certificate(cred_dict)
+                firebase_admin.initialize_app(cred)
+                logger.info("Firebase Admin SDK initialized successfully from Base64 env var.")
+            elif cred_path and os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred)
-                logger.info("Firebase Admin SDK initialized successfully.")
+                logger.info("Firebase Admin SDK initialized successfully from file path.")
             else:
-                logger.warning(f"Firebase credentials not found at {cred_path}. Notifications will be mocked.")
+                logger.warning(f"Firebase credentials not found (no Base64 env or valid path). Notifications will be mocked.")
         except Exception as e:
             logger.error(f"Failed to initialize Firebase: {e}")
 
