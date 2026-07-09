@@ -46,7 +46,11 @@ class TicketSerializer(serializers.ModelSerializer):
     
     def get_last_reply(self, obj) -> str:
         """Get the content of the most recent reply"""
-        last_reply = obj.replies.order_by('-created_at').first()
+        cached_replies = getattr(obj, '_prefetched_objects_cache', {}).get('replies')
+        if cached_replies is not None:
+            last_reply = cached_replies[0] if cached_replies else None
+        else:
+            last_reply = obj.replies.order_by('-created_at').first()
         if last_reply:
             return last_reply.content[:100]  # Truncate
         return None

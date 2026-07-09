@@ -11,6 +11,7 @@ from mainAPI.models import User, Examination, AuditLog
 from mainAPI.serializers.user import PatientSummarySerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
 from mainAPI.permissions import IsDoctor
+from mainAPI.utils.request import get_client_ip
 
 
 class PatientViewSet(viewsets.GenericViewSet):
@@ -18,6 +19,9 @@ class PatientViewSet(viewsets.GenericViewSet):
     Patient lookup and history views for doctors
     """
     permission_classes = [IsDoctor]
+    queryset = User.objects.filter(
+        role=User.Role.STUDENT
+    ).select_related('patient_profile').prefetch_related('examinations_as_patient')
     
     @extend_schema(
         tags=['Doctor Workflow'],
@@ -53,7 +57,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             )
         
         # Look up patient by UUID (QR code contains user ID)
-        patient = get_object_or_404(User, id=qr_code, role='STUDENT')
+        patient = get_object_or_404(self.get_queryset(), id=qr_code)
         
         # Create audit log for QR scan
         AuditLog.objects.create(
@@ -63,7 +67,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             object_id=patient.id,
             object_repr=str(patient),
             additional_data={'patient_id': str(patient.id)},
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -93,7 +97,7 @@ class PatientViewSet(viewsets.GenericViewSet):
         GET /patients/{id}/examinations
         Get full examination history for a patient
         """
-        patient = get_object_or_404(User, id=pk, role='STUDENT')
+        patient = get_object_or_404(self.get_queryset(), id=pk)
         
         # Create audit log for history access
         AuditLog.objects.create(
@@ -103,7 +107,7 @@ class PatientViewSet(viewsets.GenericViewSet):
             object_id=patient.id,
             object_repr=str(patient),
             additional_data={'patient_id': str(patient.id)},
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -114,12 +118,3 @@ class PatientViewSet(viewsets.GenericViewSet):
         
         serializer = ExaminationSummarySerializer(examinations, many=True)
         return Response(serializer.data)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

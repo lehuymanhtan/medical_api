@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from mainAPI.models import User, Examination, PatientProfile
-from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer
+from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer, MedicalSummaryUpdateSerializer
 from mainAPI.serializers.examination import ExaminationSummarySerializer
 from mainAPI.permissions import IsStudent
 
@@ -19,18 +19,38 @@ class UserProfileViewSet(viewsets.GenericViewSet):
     permission_classes = [IsAuthenticated]
     
     @extend_schema(
+        methods=['GET'],
         tags=['Patient Dashboard'],
         operation_id='getUserProfile',
         summary='Lấy hồ sơ người dùng hiện tại',
         description='Trả về thông tin hồ sơ bao gồm UUID tĩnh để tạo mã QR.',
         responses={200: UserProfileSerializer}
     )
-    @action(detail=False, methods=['get'], url_path='me')
+    @extend_schema(
+        methods=['POST'],
+        tags=['Patient Dashboard'],
+        operation_id='updateUserProfile',
+        summary='Cập nhật hồ sơ người dùng hiện tại',
+        description='Cập nhật thông tin cá nhân. Các trường role, student_id, email, và phone_number không thể thay đổi.',
+        request=UserProfileSerializer,
+        responses={
+            200: UserProfileSerializer,
+            400: {'description': 'Dữ liệu không hợp lệ'}
+        }
+    )
+    @action(detail=False, methods=['get', 'post'], url_path='me')
     def get_profile(self, request):
         """
-        GET /users/me
-        Get current user's profile
+        GET, POST /users/me
+        Get or update current user's profile
         """
+        if request.method == 'POST':
+            serializer = UserProfileSerializer(request.user, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
     
@@ -67,7 +87,12 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         examinations = Examination.objects.filter(
             patient=request.user
         ).select_related('doctor').order_by('-examination_date')
-        
+
+        page = self.paginate_queryset(examinations)
+        if page is not None:
+            serializer = ExaminationSummarySerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = ExaminationSummarySerializer(examinations, many=True)
         return Response(serializer.data)
     
@@ -87,9 +112,10 @@ class UserProfileViewSet(viewsets.GenericViewSet):
                         'description': 'Nhóm máu'
                     },
                     'allergies': {
-                        'type': 'string',
+                        'type': 'array',
+                        'items': {'type': 'string'},
                         'nullable': True,
-                        'description': 'Danh sách dị ứng (phân cách bằng dấu phẩy)'
+                        'description': 'Danh sách dị ứng'
                     }
                 }
             }
@@ -105,35 +131,16 @@ class UserProfileViewSet(viewsets.GenericViewSet):
         """
         PATCH /users/me/medical-summary
         Update medical summary for current student
-        Only blood_type and allergies can be updated
         """
         user = request.user
         
         # Get or create patient profile
         patient_profile, created = PatientProfile.objects.get_or_create(user=user)
         
-        # Extract allowed fields
-        blood_type = request.data.get('blood_type')
-        allergies = request.data.get('allergies')
-        
-        # Update blood_type if provided
-        if blood_type is not None:
-            if blood_type == '':
-                patient_profile.blood_type = ''
-            elif blood_type in dict(PatientProfile.BLOOD_TYPE_CHOICES):
-                patient_profile.blood_type = blood_type
-            else:
-                return Response(
-                    {'error': 'Invalid blood type'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-        
-        # Update allergies if provided
-        if allergies is not None:
-            patient_profile.allergies = allergies
-        
-        patient_profile.save()
-        
-        # Return updated summary
-        serializer = PatientSummarySerializer(user)
-        return Response(serializer.data)
+        serializer = MedicalSummaryUpdateSerializer(patient_profile, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            # Return updated summary
+            summary_serializer = PatientSummarySerializer(user)
+            return Response(summary_serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

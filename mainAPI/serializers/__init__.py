@@ -17,7 +17,9 @@ from .examination import (
     ExaminationSerializer,
     ExaminationCreateSerializer,
     ExaminationUpdateSerializer,
-    ExaminationFinalizeSerializer
+    ExaminationFinalizeSerializer,
+    PrescriptionSerializer,
+    PrescriptionCreateSerializer,
 )
 from .ticket import (
     TicketSerializer,

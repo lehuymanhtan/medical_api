@@ -2,7 +2,30 @@
 Examination Serializers
 """
 from rest_framework import serializers
-from mainAPI.models import Examination, Appointment
+from mainAPI.models import Examination, Appointment, User, Prescription
+
+
+class PrescriptionSerializer(serializers.ModelSerializer):
+    """Read serializer — used for nested display in ExaminationSerializer"""
+    class Meta:
+        model = Prescription
+        fields = ['id', 'name', 'morning', 'evening', 'before_meal', 'quantity', 'summary']
+        read_only_fields = ['id']
+
+
+class PrescriptionCreateSerializer(serializers.ModelSerializer):
+    """Write serializer — used by PrescriptionViewSet to create/update prescriptions"""
+    class Meta:
+        model = Prescription
+        fields = ['name', 'morning', 'evening', 'before_meal', 'quantity', 'summary']
+        extra_kwargs = {
+            'name':        {'help_text': 'Medicine name.'},
+            'morning':     {'help_text': 'Take in the morning.'},
+            'evening':     {'help_text': 'Take in the evening.'},
+            'before_meal': {'help_text': 'Take before meals.'},
+            'quantity':    {'help_text': 'Total units dispensed.'},
+            'summary':     {'help_text': 'Additional instructions.'},
+        }
 
 
 class ExaminationSummarySerializer(serializers.ModelSerializer):
@@ -25,7 +48,7 @@ class ExaminationSummarySerializer(serializers.ModelSerializer):
     
     def get_diagnosis_short(self, obj) -> str:
         """Return truncated diagnosis"""
-        if obj.status == 'COMPLETED' and obj.final_diagnosis:
+        if obj.status == Examination.Status.COMPLETED and obj.final_diagnosis:
             return obj.final_diagnosis[:100]
         elif obj.initial_diagnosis:
             return obj.initial_diagnosis[:100]
@@ -38,6 +61,7 @@ class ExaminationSerializer(serializers.ModelSerializer):
     """
     patient_name = serializers.CharField(source='patient.full_name', read_only=True)
     doctor_name = serializers.CharField(source='doctor.full_name', read_only=True)
+    medicines = PrescriptionSerializer(many=True, read_only=True)
     
     class Meta:
         model = Examination
@@ -52,17 +76,15 @@ class ExaminationSerializer(serializers.ModelSerializer):
             'initial_diagnosis',
             'notes',
             'final_diagnosis',
-            'prescription',
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
             'status',
             'examination_date',
             'finalized_at',
             'created_at',
             'updated_at',
+            'medicines',
         ]
         read_only_fields = [
             'id',
@@ -93,8 +115,6 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
         ]
         extra_kwargs = {
             'patient_id': {'help_text': 'UUID of the student/patient.'},
@@ -104,20 +124,16 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
             'blood_pressure': {'help_text': 'Blood pressure reading (e.g., 120/80).'},
             'heart_rate': {'help_text': 'Heart rate in beats per minute (bpm).'},
             'temperature': {'help_text': 'Body temperature in Celsius (°C).'},
-            'weight': {'help_text': 'Patient weight in kg.'},
-            'height': {'help_text': 'Patient height in cm.'},
         }
     
     def validate(self, attrs):
         """Validate appointment and patient"""
-        from mainAPI.models import User
-        
         patient_id = attrs.pop('patient_id')
         appointment_id = attrs.pop('appointment_id', None)
         
         # Validate patient exists and is a student
         try:
-            patient = User.objects.get(id=patient_id, role='STUDENT')
+            patient = User.objects.get(id=patient_id, role=User.Role.STUDENT)
             attrs['patient'] = patient
         except User.DoesNotExist:
             raise serializers.ValidationError("Invalid patient ID")
@@ -126,8 +142,11 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
         if appointment_id:
             try:
                 appointment = Appointment.objects.get(id=appointment_id)
-                if hasattr(appointment, 'examination'):
+                try:
+                    _ = appointment.examination
                     raise serializers.ValidationError("This appointment already has an examination")
+                except Examination.DoesNotExist:
+                    pass
                 attrs['appointment'] = appointment
                 
                 # Validate patient matches appointment
@@ -148,7 +167,7 @@ class ExaminationCreateSerializer(serializers.ModelSerializer):
         
         # Update appointment status
         if examination.appointment:
-            examination.appointment.status = 'COMPLETED'
+            examination.appointment.status = Appointment.Status.COMPLETED
             examination.appointment.save()
         
         return examination
@@ -167,8 +186,6 @@ class ExaminationUpdateSerializer(serializers.ModelSerializer):
             'blood_pressure',
             'heart_rate',
             'temperature',
-            'weight',
-            'height',
         ]
         extra_kwargs = {
             'blood_pressure': {'help_text': 'Update blood pressure reading (e.g., 120/80).'},
@@ -178,7 +195,7 @@ class ExaminationUpdateSerializer(serializers.ModelSerializer):
     
     def validate(self, attrs):
         """Prevent updates to finalized examinations"""
-        if self.instance.status == 'COMPLETED':
+        if self.instance.status == Examination.Status.COMPLETED:
             raise serializers.ValidationError("Cannot update finalized examination")
         return attrs
 
@@ -192,12 +209,10 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
         model = Examination
         fields = [
             'final_diagnosis',
-            'prescription',
             'notes',
         ]
         extra_kwargs = {
             'final_diagnosis': {'help_text': 'Conclusive diagnosis (required for finalization).'},
-            'prescription': {'help_text': 'Medicines and dosage instructions (required for finalization).'},
             'notes': {'help_text': 'Final notes or follow-up instructions.'},
         }
     
@@ -206,10 +221,7 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
         if not attrs.get('final_diagnosis'):
             raise serializers.ValidationError("Final diagnosis is required for finalization")
         
-        if not attrs.get('prescription'):
-            raise serializers.ValidationError("Prescription is required for finalization")
-        
-        if self.instance.status == 'COMPLETED':
+        if self.instance.status == Examination.Status.COMPLETED:
             raise serializers.ValidationError("Examination is already finalized")
         
         return attrs

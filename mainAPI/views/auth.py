@@ -4,7 +4,7 @@ Authentication Views
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import authenticate
@@ -12,9 +12,11 @@ from drf_spectacular.utils import extend_schema, OpenApiExample
 from mainAPI.serializers.user import (
     UserProfileSerializer,
     LoginRequestSerializer,
-    LoginResponseSerializer
+    LoginResponseSerializer,
+    ChangePasswordRequestSerializer
 )
 from mainAPI.models import AuditLog
+from mainAPI.utils.request import get_client_ip
 
 
 class LoginView(APIView):
@@ -94,7 +96,7 @@ class LoginView(APIView):
             model_name='User',
             object_id=user.id,
             object_repr=str(user),
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -106,15 +108,6 @@ class LoginView(APIView):
             'refresh': str(refresh),
             'user': user_serializer.data
         }, status=status.HTTP_200_OK)
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
 
 
 class RefreshTokenView(APIView):
@@ -193,3 +186,119 @@ class RefreshTokenView(APIView):
                 {'error': 'Invalid or expired refresh token'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+
+class ChangePasswordView(APIView):
+    """
+    Change user password endpoint
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='changePassword',
+        summary='Đổi mật khẩu người dùng',
+        description='Cho phép người dùng đã xác thực thay đổi mật khẩu của họ.',
+        request=ChangePasswordRequestSerializer,
+        responses={
+            200: {'description': 'Đổi mật khẩu thành công'},
+            400: {'description': 'Mật khẩu cũ không chính xác hoặc dữ liệu không hợp lệ'}
+        },
+        examples=[
+            OpenApiExample(
+                'Change Password Request',
+                value={
+                    'old_password': 'currentpassword123',
+                    'new_password': 'newpassword123'
+                },
+                request_only=True,
+            )
+        ]
+    )
+    def post(self, request):
+        serializer = ChangePasswordRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            old_password = serializer.validated_data.get('old_password')
+            new_password = serializer.validated_data.get('new_password')
+            
+            user = request.user
+            if not user.check_password(old_password):
+                return Response(
+                    {'error': 'Mật khẩu cũ không chính xác'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Set the new password and save the user
+            user.set_password(new_password)
+            user.save()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=user,
+                action=AuditLog.Action.USER_CHANGE_PASSWORD,
+                model_name='User',
+                object_id=user.id,
+                object_repr=str(user),
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            )
+            
+            return Response(
+                {'message': 'Đổi mật khẩu thành công'},
+                status=status.HTTP_200_OK
+            )
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LogoutView(APIView):
+    """
+    Logout user endpoint
+    """
+    permission_classes = [IsAuthenticated]
+    
+    @extend_schema(
+        tags=['Auth'],
+        operation_id='logout',
+        summary='Đăng xuất khỏi hệ thống',
+        description='Đưa refresh token vào blacklist để thu hồi quyền truy cập.',
+        request={
+            'application/json': {
+                'type': 'object',
+                'properties': {
+                    'refresh': {
+                        'type': 'string',
+                        'description': 'Refresh token cần thu hồi'
+                    }
+                },
+                'required': ['refresh']
+            }
+        },
+        responses={
+            200: {'description': 'Đăng xuất thành công'},
+            400: {'description': 'Thiếu hoặc sai refresh token'}
+        }
+    )
+    def post(self, request):
+        try:
+            refresh_token = request.data.get('refresh')
+            if not refresh_token:
+                return Response({'error': 'Refresh token is required'}, status=status.HTTP_400_BAD_REQUEST)
+                
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+            
+            # Create audit log
+            AuditLog.objects.create(
+                user=request.user,
+                action=AuditLog.Action.USER_LOGOUT,
+                model_name='User',
+                object_id=request.user.id,
+                object_repr=str(request.user),
+                ip_address=get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+            )
+            
+            return Response({'message': 'Đăng xuất thành công'}, status=status.HTTP_200_OK)
+        except TokenError:
+            return Response({'error': 'Invalid or expired refresh token'}, status=status.HTTP_400_BAD_REQUEST)
+

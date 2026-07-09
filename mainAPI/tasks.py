@@ -17,13 +17,14 @@ def auto_close_inactive_tickets():
     
     # Find tickets that haven't been replied to in 15+ minutes
     tickets = Ticket.objects.filter(
-        status__in=['OPEN', 'IN_PROGRESS'],
+        status__in=[Ticket.Status.OPEN, Ticket.Status.IN_PROGRESS],
         last_reply_at__lt=threshold
     )
-    
-    count = 0
-    for ticket in tickets:
-        ticket.close()
-        count += 1
-    
-    return f"Auto-closed {count} tickets"
+
+    now = timezone.now()
+    updated = tickets.update(
+        status=Ticket.Status.RESOLVED,
+        resolved_at=now
+    )
+
+    return f"Auto-closed {updated} tickets"

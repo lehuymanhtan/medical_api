@@ -5,8 +5,8 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
-from drf_spectacular.utils import extend_schema, OpenApiExample
-from mainAPI.models import Examination, AuditLog
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
+from mainAPI.models import Examination, AuditLog, User
 from mainAPI.serializers.examination import (
     ExaminationSerializer,
     ExaminationCreateSerializer,
@@ -14,15 +14,34 @@ from mainAPI.serializers.examination import (
     ExaminationFinalizeSerializer
 )
 from mainAPI.permissions import IsDoctor, IsDoctorOrOwnerReadOnly
+from mainAPI.utils.request import get_client_ip
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary='Danh sách phiên khám bệnh',
+        tags=['Doctor Workflow']
+    ),
+    retrieve=extend_schema(
+        summary='Xem chi tiết phiên khám',
+        tags=['Doctor Workflow']
+    ),
+    partial_update=extend_schema(
+        summary='Cập nhật một phần phiên khám',
+        tags=['Doctor Workflow']
+    ),
+    destroy=extend_schema(
+        summary='Xóa phiên khám bệnh',
+        tags=['Doctor Workflow']
+    )
+)
 class ExaminationViewSet(viewsets.ModelViewSet):
     """
     Examination management
     - Doctors: Full CRUD access
     - Students: Read-only access to their own examinations
     """
-    queryset = Examination.objects.all().select_related('patient', 'doctor', 'appointment')
+    queryset = Examination.objects.all().select_related('patient', 'doctor', 'appointment').prefetch_related('medicines')
     
     def get_permissions(self):
         """
@@ -95,7 +114,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                     'patient_id': str(examination.patient.id),
                     'appointment_id': str(examination.appointment.id) if examination.appointment else None,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -131,7 +150,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         examination = self.get_object()
         
         # Verify doctor owns this examination
-        if examination.doctor != request.user and request.user.role != 'ADMIN':
+        if examination.doctor != request.user and request.user.role != User.Role.ADMIN:
             return Response(
                 {'error': 'You can only update your own examinations'},
                 status=status.HTTP_403_FORBIDDEN
@@ -160,7 +179,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                 'symptoms': {'old': old_data['symptoms'], 'new': updated_examination.symptoms},
                 'initial_diagnosis': {'old': old_data['initial_diagnosis'], 'new': updated_examination.initial_diagnosis},
             },
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -194,7 +213,7 @@ class ExaminationViewSet(viewsets.ModelViewSet):
         examination = self.get_object()
         
         # Verify doctor owns this examination
-        if examination.doctor != request.user and request.user.role != 'ADMIN':
+        if examination.doctor != request.user and request.user.role != User.Role.ADMIN:
             return Response(
                 {'error': 'You can only finalize your own examinations'},
                 status=status.HTTP_403_FORBIDDEN
@@ -217,14 +236,14 @@ class ExaminationViewSet(viewsets.ModelViewSet):
                 object_id=finalized_examination.id,
                 object_repr=str(finalized_examination),
                 changes={
-                    'status': {'old': old_status, 'new': 'COMPLETED'},
+                    'status': {'old': old_status, 'new': Examination.Status.COMPLETED},
                     'finalized_at': {'old': None, 'new': str(finalized_examination.finalized_at)},
                 },
                 additional_data={
                     'final_diagnosis': finalized_examination.final_diagnosis,
                     'prescription': finalized_examination.prescription,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -232,12 +251,3 @@ class ExaminationViewSet(viewsets.ModelViewSet):
             ExaminationSerializer(finalized_examination).data,
             status=status.HTTP_200_OK
         )
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip

@@ -5,9 +5,9 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
-from django.utils import timezone
-from drf_spectacular.utils import extend_schema, OpenApiExample
-from mainAPI.models import Ticket, TicketReply, AuditLog
+from django.db.models import Prefetch, Q
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
+from mainAPI.models import Ticket, TicketReply, AuditLog, User
 from mainAPI.serializers.ticket import (
     TicketSerializer,
     TicketDetailSerializer,
@@ -16,12 +16,25 @@ from mainAPI.serializers.ticket import (
 )
 from mainAPI.permissions import IsStudent, IsTicketParticipant
 from rest_framework.permissions import IsAuthenticated
+from mainAPI.utils.request import get_client_ip
 
 
+@extend_schema_view(
+    update=extend_schema(
+        summary='cập nhật phiếu hỗ trợ có id {id}',
+        tags=['Consulting']
+    ),
+    partial_update=extend_schema(
+        summary='Cập nhật một phần phiếu hỗ trợ',
+        tags=['Consulting']
+    )
+)
 class TicketViewSet(viewsets.ModelViewSet):
     """
     Ticket/consulting system endpoints
     """
+    http_method_names = ['get', 'post', 'put', 'patch', 'head', 'options']
+    
     def get_permissions(self):
         """Set permissions based on action"""
         if self.action == 'create':
@@ -36,15 +49,15 @@ class TicketViewSet(viewsets.ModelViewSet):
         """Filter tickets based on user role"""
         user = self.request.user
         
-        if user.role == 'STUDENT':
+        if user.role == User.Role.STUDENT:
             # Students see only their own tickets
             return Ticket.objects.filter(creator=user).select_related('creator', 'assigned_to')
-        elif user.role == 'DOCTOR':
+        elif user.role == User.Role.DOCTOR:
             # Doctors see assigned tickets and all open tickets
             return Ticket.objects.filter(
-                assigned_to=user
-            ) | Ticket.objects.filter(status='OPEN')
-        elif user.role == 'ADMIN':
+                Q(assigned_to=user) | Q(status=Ticket.Status.OPEN)
+            ).select_related('creator', 'assigned_to').distinct()
+        elif user.role == User.Role.ADMIN:
             # Admins see all tickets
             return Ticket.objects.all().select_related('creator', 'assigned_to')
         
@@ -72,7 +85,9 @@ class TicketViewSet(viewsets.ModelViewSet):
         GET /tickets
         List tickets based on user role
         """
-        queryset = self.get_queryset().order_by('-created_at')
+        queryset = self.get_queryset().prefetch_related(
+            Prefetch('replies', queryset=TicketReply.objects.order_by('-created_at'))
+        ).order_by('-created_at')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
     
@@ -116,7 +131,7 @@ class TicketViewSet(viewsets.ModelViewSet):
                 additional_data={
                     'subject': ticket.subject,
                 },
-                ip_address=self.get_client_ip(request),
+                ip_address=get_client_ip(request),
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
             )
         
@@ -138,10 +153,6 @@ class TicketViewSet(viewsets.ModelViewSet):
         Get ticket details with all replies
         """
         ticket = self.get_object()
-        
-        # Update last_reply_at to prevent auto-close
-        ticket.last_reply_at = timezone.now()
-        ticket.save(update_fields=['last_reply_at'])
         
         serializer = TicketDetailSerializer(ticket)
         return Response(serializer.data)
@@ -169,7 +180,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         """
         ticket = self.get_object()
         
-        if ticket.status == 'RESOLVED':
+        if ticket.status == Ticket.Status.RESOLVED:
             return Response(
                 {'error': 'Ticket is already closed'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -184,7 +195,7 @@ class TicketViewSet(viewsets.ModelViewSet):
             model_name='Ticket',
             object_id=ticket.id,
             object_repr=str(ticket),
-            ip_address=self.get_client_ip(request),
+            ip_address=get_client_ip(request),
             user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
         )
         
@@ -218,7 +229,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         """
         ticket = self.get_object()
         
-        if ticket.status == 'RESOLVED':
+        if ticket.status == Ticket.Status.RESOLVED:
             return Response(
                 {'error': 'Cannot reply to a closed ticket'},
                 status=status.HTTP_400_BAD_REQUEST
@@ -232,21 +243,7 @@ class TicketViewSet(viewsets.ModelViewSet):
         
         reply = serializer.save()
         
-        # Update ticket status if staff replies
-        if reply.is_staff_reply and ticket.status == 'OPEN':
-            ticket.status = 'IN_PROGRESS'
-            ticket.save(update_fields=['status'])
-        
         return Response(
             {'message': 'Reply added successfully'},
             status=status.HTTP_201_CREATED
         )
-    
-    def get_client_ip(self, request):
-        """Extract client IP address from request"""
-        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded_for:
-            ip = x_forwarded_for.split(',')[0]
-        else:
-            ip = request.META.get('REMOTE_ADDR')
-        return ip
