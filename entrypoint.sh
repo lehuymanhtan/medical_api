@@ -1,6 +1,22 @@
 #!/bin/bash
 set -e
 
+# Optional: Create a swap file to help with 512MB RAM limits
+if [ "$ENABLE_SWAP" = "true" ]; then
+    echo "Attempting to create and enable 512MB swap..."
+    set +e # Disable exit-on-error in case swapon is denied by the host
+    fallocate -l 512M /swapfile || dd if=/dev/zero of=/swapfile bs=1M count=512 status=none
+    chmod 0600 /swapfile
+    mkswap /swapfile
+    swapon /swapfile
+    if [ $? -eq 0 ]; then
+        echo "Swap enabled successfully."
+    else
+        echo "WARNING: Failed to enable swap. Your hosting provider might block this (requires CAP_SYS_ADMIN)."
+    fi
+    set -e # Re-enable exit-on-error
+fi
+
 echo "Checking and applying database migrations..."
 python manage.py migrate --noinput
 
