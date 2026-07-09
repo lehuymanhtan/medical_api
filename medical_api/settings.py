@@ -128,16 +128,12 @@ if DEVELOPMENT:
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.mysql',
+            'ENGINE': 'django.db.backends.postgresql',
             'NAME': config('DB_NAME', default='medical_api'),
-            'USER': config('DB_USER', default='root'),
+            'USER': config('DB_USER', default='postgres'),
             'PASSWORD': config('DB_PASSWORD'),
             'HOST': config('DB_HOST', default='127.0.0.1'),
-            'PORT': config('DB_PORT', default='3306'),
-            'OPTIONS': {
-                'charset': 'utf8mb4',
-                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
-            },
+            'PORT': config('DB_PORT', default='5432'),
         }
     }
 
