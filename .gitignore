@@ -61,6 +61,5 @@ htmlcov/
 *.bak
 *.backup
 logs/
-DEPLOYMENT.md
-QUICKSTART.md
-PRODUCTION_READINESS.md
+
+*.md
