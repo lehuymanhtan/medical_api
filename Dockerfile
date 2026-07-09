@@ -39,9 +39,14 @@ RUN useradd -m django && chown -R django:django /app
 # Copy supervisor configuration
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Copy and set up the entrypoint script
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 # Default port, can be overridden by docker run -e PORT=...
 ENV PORT=8000
 EXPOSE $PORT
 
-# Run supervisor to manage all processes
+# Set entrypoint to run migrations, then start supervisor
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
