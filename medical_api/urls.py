@@ -20,11 +20,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from mainAPI.views.health import HealthCheckView
-from django.http import HttpResponse
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/health/', lambda r: HttpResponse(status=200), name='simple-health-check'),
     path('api/v1/', include('mainAPI.urls')),
     path('api/v1/health/', HealthCheckView.as_view(), name='health-check'),
     # API Documentation
