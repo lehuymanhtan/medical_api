@@ -143,11 +143,14 @@ class IsDoctorOrOwnerReadOnly(permissions.BasePermission):
         if request.user.role in [User.Role.DOCTOR, User.Role.ADMIN]:
             return True
         
-        # Students can only view their own examinations
+        # Students can only view their own data
         if request.user.role == User.Role.STUDENT:
             # Only allow safe methods (GET, HEAD, OPTIONS)
             if request.method in permissions.READONLY_METHODS:
-                return obj.patient == request.user
+                if hasattr(obj, 'patient'):
+                    return obj.patient == request.user
+                elif hasattr(obj, 'examination'):
+                    return obj.examination.patient == request.user
             return False
         
         return False

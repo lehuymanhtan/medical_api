@@ -54,6 +54,7 @@ urlpatterns = [
             'patch': 'update_medical_summary'
         }), name='user-medical-summary'),
         path('me/examinations', UserProfileViewSet.as_view({'get': 'my_examinations'}), name='user-examinations'),
+        path('me/medicines', UserProfileViewSet.as_view({'get': 'my_medicines'}), name='user-medicines'),
     ])),
     
     # Patient lookup (doctor workflow)

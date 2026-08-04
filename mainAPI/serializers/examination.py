@@ -233,3 +233,11 @@ class ExaminationFinalizeSerializer(serializers.ModelSerializer):
         
         instance.finalize()
         return instance
+
+
+class PrescriptionWithExaminationSerializer(PrescriptionSerializer):
+    """Serializer for standalone medicine lists, includes examination context"""
+    examination = ExaminationSummarySerializer(read_only=True)
+
+    class Meta(PrescriptionSerializer.Meta):
+        fields = PrescriptionSerializer.Meta.fields + ['examination']
