@@ -6,9 +6,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from mainAPI.models import User, Examination, PatientProfile
+from mainAPI.models import User, Examination, PatientProfile, Prescription
 from mainAPI.serializers.user import UserProfileSerializer, PatientSummarySerializer, MedicalSummaryUpdateSerializer
-from mainAPI.serializers.examination import ExaminationSummarySerializer
+from mainAPI.serializers.examination import ExaminationSummarySerializer, PrescriptionSerializer, PrescriptionWithExaminationSerializer
 from mainAPI.permissions import IsStudent
 
 
@@ -94,6 +94,32 @@ class UserProfileViewSet(viewsets.GenericViewSet):
             return self.get_paginated_response(serializer.data)
 
         serializer = ExaminationSummarySerializer(examinations, many=True)
+        return Response(serializer.data)
+    
+    @extend_schema(
+        tags=['Patient Dashboard'],
+        operation_id='getMyMedicines',
+        summary='Xem danh sách thuốc của tôi',
+        description='Trả về danh sách tất cả các loại thuốc từ các lần khám đã hoàn tất (COMPLETED) của người dùng hiện tại.',
+        responses={200: PrescriptionWithExaminationSerializer(many=True)}
+    )
+    @action(detail=False, methods=['get'], url_path='me/medicines')
+    def my_medicines(self, request):
+        """
+        GET /users/me/medicines
+        Get all medicines for current user across all examinations
+        """
+        medicines = Prescription.objects.filter(
+            examination__patient=request.user,
+            examination__status=Examination.Status.COMPLETED
+        ).select_related('examination').order_by('-examination__examination_date')
+
+        page = self.paginate_queryset(medicines)
+        if page is not None:
+            serializer = PrescriptionWithExaminationSerializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        serializer = PrescriptionWithExaminationSerializer(medicines, many=True)
         return Response(serializer.data)
     
     @extend_schema(

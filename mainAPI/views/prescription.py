@@ -7,18 +7,19 @@ from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
 from mainAPI.models import Examination, Prescription
 from mainAPI.serializers.examination import PrescriptionSerializer, PrescriptionCreateSerializer
-from mainAPI.permissions import IsDoctor
+from mainAPI.permissions import IsDoctor, IsDoctorOrOwnerReadOnly
 
 
 @extend_schema_view(
     list=extend_schema(
         summary='Danh sách thuốc của phiên khám',
-        tags=['Doctor Workflow'],
-        description='Lấy danh sách các loại thuốc đã được kê cho phiên khám này.'
+        tags=['Doctor Workflow', 'Patient Dashboard'],
+        description='Lấy danh sách các loại thuốc đã được kê cho phiên khám này. Bác sĩ có thể xem tất cả, sinh viên chỉ có thể xem thuốc từ phiên khám đã hoàn tất (COMPLETED) của chính mình.'
     ),
     retrieve=extend_schema(
         summary='Chi tiết một loại thuốc đã kê',
-        tags=['Doctor Workflow']
+        tags=['Doctor Workflow', 'Patient Dashboard'],
+        description='Xem chi tiết thuốc. Sinh viên chỉ có thể xem nếu thuộc phiên khám đã hoàn tất (COMPLETED) của mình.'
     ),
     create=extend_schema(
         summary='Thêm thuốc vào đơn thuốc',
@@ -55,14 +56,20 @@ from mainAPI.permissions import IsDoctor
 class PrescriptionViewSet(viewsets.ModelViewSet):
     """
     CRUD for individual prescription items under an examination.
-    Doctors only — no student write access.
+    Doctors can read/write, students can only read their own.
     """
-    permission_classes = [IsDoctor]
+    permission_classes = [IsDoctorOrOwnerReadOnly]
 
     def get_queryset(self):
-        return Prescription.objects.filter(
+        qs = Prescription.objects.filter(
             examination_id=self.kwargs['examination_id']
         )
+        if hasattr(self.request.user, 'role') and self.request.user.role == 'STUDENT':
+            qs = qs.filter(
+                examination__patient=self.request.user,
+                examination__status=Examination.Status.COMPLETED
+            )
+        return qs
 
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
