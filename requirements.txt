@@ -36,6 +36,8 @@ pytz
 # Production WSGI server
 gunicorn
 
+# Static files serving in production
+whitenoise
 
 # Database connection pooling
 django-db-connection-pool
