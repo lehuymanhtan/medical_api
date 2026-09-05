@@ -8,7 +8,7 @@ from .appointment import AppointmentViewSet
 from .examination import ExaminationViewSet
 from .ticket import TicketViewSet
 from .utility import ImageUploadView
-from .admin_account import AdminCreateAccountView, AdminBatchCreateAccountView
+from .admin_account import AdminCreateAccountView, AdminBatchCreateAccountView, AdminUserListView
 from .password_reset import ForgotPasswordView, ResetPasswordView
 
 __all__ = [
@@ -24,6 +24,7 @@ __all__ = [
     'ImageUploadView',
     'AdminCreateAccountView',
     'AdminBatchCreateAccountView',
+    'AdminUserListView',
     'ForgotPasswordView',
     'ResetPasswordView',
 ]
