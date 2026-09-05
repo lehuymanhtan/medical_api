@@ -205,7 +205,7 @@ REST_FRAMEWORK = {
         'anon': '10/minute',
         'user': '100/minute',
     },
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'DEFAULT_PAGINATION_CLASS': 'mainAPI.pagination.CustomPageNumberPagination',
     'PAGE_SIZE': 20,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
@@ -309,7 +309,7 @@ SPECTACULAR_SETTINGS = {
     'SERVE_INCLUDE_SCHEMA': False,
     'SERVERS': [
         {'url': 'http://localhost:8000', 'description': 'Máy chủ phát triển cục bộ (Local Dev)'},
-        {'url': 'https://dev_medicalapi.tanmanh350.ovh', 'description': 'Máy chủ phát triển (Development)'}
+        {'url': 'https://medical-api-ph9p.onrender.com', 'description': 'Máy chủ phát triển (Development)'}
     ],
     'TAGS': [
         {'name': 'Auth', 'description': 'Các endpoint xác thực công khai.'},

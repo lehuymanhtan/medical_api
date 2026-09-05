@@ -12,7 +12,51 @@ from mainAPI.serializers.user import (
     UserProfileSerializer,
 )
 from mainAPI.permissions import IsAdmin
+from mainAPI.models import User
+from rest_framework.generics import ListAPIView
 
+
+class AdminUserListView(ListAPIView):
+    """
+    Admin-only endpoint to get a list of users on the system with pagination.
+    """
+    permission_classes = [IsAdmin]
+    serializer_class = UserProfileSerializer
+    queryset = User.objects.all().order_by('-created_at')
+
+    @extend_schema(
+        tags=['Admin'],
+        operation_id='adminListUsers',
+        summary='Lấy danh sách người dùng (Admin)',
+        description='Trả về danh sách người dùng trong hệ thống có phân trang.',
+        responses={
+            200: UserProfileSerializer,
+            403: {'description': 'Không có quyền truy cập'},
+        },
+        examples=[
+            OpenApiExample(
+                'Paginated User List',
+                value={
+                    "id": "123e4567-e89b-12d3-a456-426614174000",
+                    "full_name": "Nguyễn Văn A",
+                    "role": "STUDENT",
+                    "student_id": "SV2024001",
+                    "cohort": "2024",
+                    "class_name": "CNTT01",
+                    "email": "nva@example.com",
+                    "phone_number": "0123456789",
+                    "date_of_birth": "2000-01-01",
+                    "sex": "MALE",
+                    "address": "123 ABC Street",
+                    "created_at": "2024-01-01T12:00:00Z"
+                },
+                response_only=True,
+                status_codes=['200'],
+            )
+        ]
+    )
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
 class AdminCreateAccountView(APIView):
     """

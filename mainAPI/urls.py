@@ -16,6 +16,7 @@ from mainAPI.views import (
     ImageUploadView,
     AdminCreateAccountView,
     AdminBatchCreateAccountView,
+    AdminUserListView,
     ForgotPasswordView,
     ResetPasswordView,
 )
@@ -67,6 +68,7 @@ urlpatterns = [
     path('upload/image', ImageUploadView.as_view(), name='upload-image'),
     
     # Admin account management
+    path('admin/users', AdminUserListView.as_view(), name='admin-users-list'),
     path('admin/accounts/create', AdminCreateAccountView.as_view(), name='admin-create-account'),
     path('admin/accounts/batch-create', AdminBatchCreateAccountView.as_view(), name='admin-batch-create-account'),
     
